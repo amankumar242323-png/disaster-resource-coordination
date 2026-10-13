@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:al="https://api.disaster-coordination.example/alerts">
+
+    <soapenv:Header/>
+
+    <soapenv:Body>
+        <al:GetActiveAlertsResponse>
+            <al:alerts>
+                <al:alert>
+                    <al:alertId>ALT-2026-1042</al:alertId>
+                    <al:hazardType>FLOOD</al:hazardType>
+                    <al:severity>HIGH</al:severity>
+                    <al:regionCode>GJ-GANDHINAGAR</al:regionCode>
+                    <al:message>Flooding reported near low-lying areas. Follow local authority instructions.</al:message>
+                    <al:issuedAt>2026-10-12T09:15:00Z</al:issuedAt>
+                    <al:expiresAt>2026-10-12T18:00:00Z</al:expiresAt>
+                </al:alert>
+            </al:alerts>
+        </al:GetActiveAlertsResponse>
+    </soapenv:Body>
+
+</soapenv:Envelope>

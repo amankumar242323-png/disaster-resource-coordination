@@ -1,0 +1,36 @@
+{
+  "name": "disaster-resource-coordination-server",
+  "version": "1.0.0",
+  "description": "REST API backend for the Disaster Resource Coordination Platform",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --runInBand"
+  },
+  "keywords": [
+    "disaster-management",
+    "resource-coordination",
+    "rest-api",
+    "express",
+    "postgresql"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "file-type": "^22.1.1",
+    "multer": "^2.4.0",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "jest": "^30.5.2",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.3.1"
+  }
+}

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:al="https://api.disaster-coordination.example/alerts"
+    xmlns:sec="https://api.disaster-coordination.example/security">
+
+    <soapenv:Header>
+        <sec:PartnerCredentials>
+            <sec:clientId>disaster-coordination-platform</sec:clientId>
+            <sec:clientToken>REPLACE_WITH_SECRET_TOKEN</sec:clientToken>
+        </sec:PartnerCredentials>
+        <sec:CorrelationId>corr-2026-000184</sec:CorrelationId>
+    </soapenv:Header>
+
+    <soapenv:Body>
+        <al:GetActiveAlertsRequest>
+            <al:regionCode>GJ-GANDHINAGAR</al:regionCode>
+            <al:since>2026-10-12T00:00:00Z</al:since>
+        </al:GetActiveAlertsRequest>
+    </soapenv:Body>
+
+</soapenv:Envelope>

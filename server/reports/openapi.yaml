@@ -1,0 +1,359 @@
+
+openapi: 3.0.3
+
+info:
+  title: Disaster Resource Coordination - Field Reports API
+  version: "1.0.0"
+  description: >
+    API for creating, retrieving and listing field reports
+    and registering report photo metadata.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: Reports
+    description: Field report operations
+  - name: Photos
+    description: Report photo metadata
+
+paths:
+  /reports:
+    post:
+      tags:
+        - Reports
+      summary: Create a field report
+      description: >
+        Creates a report. Repeated requests with the same
+        Idempotency-Key and identical payload must not create
+        duplicate reports.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReportRequest"
+      responses:
+        "201":
+          description: Report created
+          headers:
+            Location:
+              description: URL of the created report
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    get:
+      tags:
+        - Reports
+      summary: List field reports
+      parameters:
+        - name: shelterId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: severity
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Severity"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Matching reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /reports/{reportId}:
+    parameters:
+      - $ref: "#/components/parameters/ReportId"
+    get:
+      tags:
+        - Reports
+      summary: Get one field report
+      responses:
+        "200":
+          description: Report found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /reports/{reportId}/photos:
+    parameters:
+      - $ref: "#/components/parameters/ReportId"
+    post:
+      tags:
+        - Photos
+      summary: Upload a photo for a field report
+      description: >
+        Uploads one JPEG, PNG or WebP image and stores its metadata.
+        Maximum file size is 5 MiB.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - photo
+              properties:
+                photo:
+                  type: string
+                  format: binary
+            encoding:
+              photo:
+                contentType: image/jpeg, image/png, image/webp
+      responses:
+        "201":
+          description: Photo uploaded and metadata saved
+          headers:
+            Location:
+              description: URL identifying the uploaded photo
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportPhoto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          description: Uploaded file exceeds 5 MiB
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          $ref: "#/components/responses/InternalError"
+components:
+  parameters:
+    ReportId:
+      name: reportId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Unique UUID for one logical report-creation attempt.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Severity:
+      type: string
+      enum:
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
+
+    CreateReportRequest:
+      type: object
+      required:
+        - shelterId
+        - reportedBy
+        - reportType
+        - severity
+        - description
+      properties:
+        shelterId:
+          type: integer
+          format: int64
+          minimum: 1
+        reportedBy:
+          type: integer
+          format: int64
+          minimum: 1
+        reportType:
+          type: string
+          minLength: 1
+          maxLength: 50
+        severity:
+          $ref: "#/components/schemas/Severity"
+        description:
+          type: string
+          minLength: 1
+        occupancyCount:
+          type: integer
+          minimum: 0
+          nullable: true
+
+    Report:
+      type: object
+      required:
+        - reportId
+        - shelterId
+        - reportedBy
+        - reportType
+        - severity
+        - description
+        - createdAt
+      properties:
+        reportId:
+          type: integer
+          format: int64
+        shelterId:
+          type: integer
+          format: int64
+        reportedBy:
+          type: integer
+          format: int64
+        reportType:
+          type: string
+        severity:
+          $ref: "#/components/schemas/Severity"
+        description:
+          type: string
+        occupancyCount:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    CreatePhotoRequest:
+      type: object
+      required:
+        - fileName
+        - contentType
+        - fileSizeBytes
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          maxLength: 100
+        fileSizeBytes:
+          type: integer
+          minimum: 0
+
+    ReportPhoto:
+      type: object
+      required:
+        - photoId
+        - reportId
+        - fileName
+        - contentType
+        - fileSizeBytes
+        - storagePath
+        - uploadedAt
+      properties:
+        photoId:
+          type: integer
+          format: int64
+        reportId:
+          type: integer
+          format: int64
+        fileName:
+          type: string
+        contentType:
+          type: string
+        fileSizeBytes:
+          type: integer
+        storagePath:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+
+    Problem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Malformed request or invalid query parameter
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+    Conflict:
+      description: Idempotency key reused with a different payload
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+    NotFound:
+      description: Requested report does not exist
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+    UnprocessableEntity:
+      description: Request violates a business or domain rule
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"

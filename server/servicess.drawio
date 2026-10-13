@@ -1,0 +1,91 @@
+<mxfile host="Electron">
+  <diagram name="Service Design" id="svc2">
+    <mxGraphModel dx="2239" dy="1465" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1060" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;" value="&lt;b&gt;Disaster Resource Coordination Platform - Service Design Diagram&lt;/b&gt;" vertex="1">
+          <mxGeometry height="40" width="700" x="60" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="FE" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;align=center;verticalAlign=middle;" value="&lt;b&gt;REACT FRONTEND&lt;/b&gt;" vertex="1">
+          <mxGeometry height="70" width="340" x="910" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="S6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;spacingRight=8;" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;S6 - API &amp;amp; COORDINATION QUERY SERVICE&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 12px;&quot;&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); background-color: transparent;&quot;&gt;Responsible:&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 12px;&quot;&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); background-color: transparent;&quot;&gt;Aditya Verma - 20251651009&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;Owns:&lt;/b&gt;&lt;/div&gt;&lt;ul style=&quot;margin:4px 0 0 0&quot;&gt;&lt;li&gt;API configuration&lt;/li&gt;&lt;li&gt;Query-cache metadata&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="230" width="960" x="600" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="S5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#bac8d3;strokeColor=#23445d;fontSize=14;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;spacingRight=8;" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;S5 - IDENTITY &amp;amp; ACCESS SERVICE&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 12px; text-align: center; background-color: transparent;&quot;&gt;Responsible:&lt;/span&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 12px; text-align: center; background-color: rgb(236, 236, 236);&quot;&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 12px; text-align: center; background-color: transparent;&quot;&gt;Aman Kumar- 20251651017&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;Owns:&lt;/b&gt;&lt;/div&gt;&lt;ul style=&quot;margin:4px 0 0 0&quot;&gt;&lt;li&gt;User accounts&lt;/li&gt;&lt;li&gt;Roles and permissions&lt;/li&gt;&lt;li&gt;Shelter assignments&lt;/li&gt;&lt;li&gt;Refresh sessions&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="230" width="340" x="60" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="S4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;spacingRight=8;" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;S4 - DISASTER ALERT INTEGRATION SERVICE&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 12px; text-align: center; background-color: transparent;&quot;&gt;Responsible:&lt;/span&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 12px; text-align: center; background-color: rgb(236, 236, 236);&quot;&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 12px; text-align: center; background-color: transparent;&quot;&gt;Aman Kumar- 20251651017&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;Owns:&lt;/b&gt;&lt;/div&gt;&lt;ul style=&quot;margin:4px 0 0 0&quot;&gt;&lt;li&gt;Normalized disaster alert records&lt;/li&gt;&lt;li&gt;Last-known-good alert snapshot&lt;/li&gt;&lt;li&gt;Integration and circuit-breaker state&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="230" width="340" x="1920" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="S2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=14;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;spacingRight=8;" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;S2 - FIELD REPORT SERVICE&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;div style=&quot;scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 12px;&quot;&gt;&lt;span style=&quot;scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Responsible :&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 12px;&quot;&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20);&quot;&gt;Pratik Sinha - 20251651071&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); background-color: transparent;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;Owns:&lt;/b&gt;&lt;/div&gt;&lt;ul style=&quot;margin:4px 0 0 0&quot;&gt;&lt;li&gt;Field reports&lt;/li&gt;&lt;li&gt;Photo metadata&lt;/li&gt;&lt;li&gt;Idempotency records&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="230" width="340" x="300" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="S1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#3A5431;fontSize=14;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;spacingRight=8;" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;S1 - SHELTER &amp;amp; INVENTORY SERVICE&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 19px;&quot;&gt;&lt;b style=&quot;scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20);&quot;&gt;Responsible:&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 19px;&quot;&gt;&lt;b style=&quot;scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20);&quot;&gt;Shrikanta Nayak - 20251651090&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;Owns:&lt;/b&gt;&lt;/div&gt;&lt;ul style=&quot;margin:4px 0 0 0&quot;&gt;&lt;li&gt;Shelter profiles&lt;/li&gt;&lt;li&gt;Shelter capacity&lt;/li&gt;&lt;li&gt;Inventory balances&lt;/li&gt;&lt;li&gt;Inventory transaction history&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="230" width="340" x="840" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="S3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;spacingRight=8;" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;S3 - RESOURCE REQUEST &amp;amp; TRANSFER SERVICE&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 19px;&quot;&gt;&lt;b style=&quot;scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20);&quot;&gt;Responsible:&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20); font-size: 19px;&quot;&gt;&lt;b style=&quot;scrollbar-color: rgba(168, 169, 170, 0.52) rgb(18, 19, 20);&quot;&gt;Shrikanta Nayak - 20251651090&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align:left&quot;&gt;&lt;b&gt;Owns:&lt;/b&gt;&lt;/div&gt;&lt;ul style=&quot;margin:4px 0 0 0&quot;&gt;&lt;li&gt;Resource requests&lt;/li&gt;&lt;li&gt;Approval and rejection decisions&lt;/li&gt;&lt;li&gt;Transfer records&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="230" width="340" x="1380" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="EX" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;align=center;verticalAlign=middle;dashed=1;" value="&lt;b&gt;EXTERNAL GOVERNMENT DISASTER ALERT FEED (SOAP/WSDL)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="130" width="340" x="1920" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="a1" parent="1" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.6;dx=26;notch=0;direction=south;fillColor=#5D7F99;strokeColor=#3d5a73;" value="" vertex="1">
+          <mxGeometry height="120" width="36" x="1062" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;whiteSpace=nowrap;" value="REST / GraphQL" vertex="1">
+          <mxGeometry height="30" width="200" x="1105" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="a2" parent="1" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.6;dx=26;notch=0;direction=west;fillColor=#5D7F99;strokeColor=#3d5a73;" value="" vertex="1">
+          <mxGeometry height="36" width="200" x="400" y="327" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;whiteSpace=nowrap;" value="authorizeRequest" vertex="1">
+          <mxGeometry height="30" width="200" x="400" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="a3" parent="1" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.6;dx=26;notch=0;direction=south;fillColor=#5D7F99;strokeColor=#3d5a73;" value="" vertex="1">
+          <mxGeometry height="220" width="36" x="992" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;whiteSpace=nowrap;" value="searchShelters / getInventory" vertex="1">
+          <mxGeometry height="30" width="300" x="1040" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="a4" parent="1" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.6;dx=26;notch=0;direction=south;fillColor=#5D7F99;strokeColor=#3d5a73;" value="" vertex="1">
+          <mxGeometry height="220" width="36" x="602" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;whiteSpace=nowrap;" value="submitReport / listRecentReports" vertex="1">
+          <mxGeometry height="30" width="340" x="650" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="a5" parent="1" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.6;dx=26;notch=0;direction=south;fillColor=#5D7F99;strokeColor=#3d5a73;" value="" vertex="1">
+          <mxGeometry height="220" width="36" x="1522" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;whiteSpace=nowrap;" value="listResourceRequests" vertex="1">
+          <mxGeometry height="30" width="240" x="1570" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="a6" parent="1" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.6;dx=26;notch=0;direction=east;fillColor=#5D7F99;strokeColor=#3d5a73;" value="" vertex="1">
+          <mxGeometry height="36" width="360" x="1560" y="327" as="geometry" />
+        </mxCell>
+        <mxCell id="l6" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;whiteSpace=nowrap;" value="getActiveAlerts" vertex="1">
+          <mxGeometry height="30" width="360" x="1560" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="a7" parent="1" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.6;dx=26;notch=0;direction=east;fillColor=#5D7F99;strokeColor=#3d5a73;" value="" vertex="1">
+          <mxGeometry height="36" width="200" x="640" y="777" as="geometry" />
+        </mxCell>
+        <mxCell id="l7" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;whiteSpace=nowrap;" value="getShelter" vertex="1">
+          <mxGeometry height="30" width="200" x="640" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="a8" parent="1" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.6;dx=26;notch=0;direction=west;fillColor=#5D7F99;strokeColor=#3d5a73;" value="" vertex="1">
+          <mxGeometry height="36" width="200" x="1180" y="777" as="geometry" />
+        </mxCell>
+        <mxCell id="l8" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;whiteSpace=nowrap;" value="reserveResources" vertex="1">
+          <mxGeometry height="30" width="200" x="1180" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="a9" parent="1" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.6;dx=26;notch=0;direction=south;fillColor=#5D7F99;strokeColor=#3d5a73;" value="" vertex="1">
+          <mxGeometry height="220" width="36" x="2082" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="l9" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;whiteSpace=nowrap;" value="fetchDisasterAlerts" vertex="1">
+          <mxGeometry height="30" width="200" x="2125" y="540" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

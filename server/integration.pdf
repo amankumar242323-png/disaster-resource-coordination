@@ -1,0 +1,102 @@
+# CS543 WEB SERVICES — ASSIGNMENT 3
+## External SOAP Partner Integration
+
+**Project Name:** Disaster Resource Coordination Platform  
+**Group ID:** 02
+
+### Team Members
+
+| Roll Number | Name |
+|---|---|
+| 20251651017 | Aman Kumar |
+| 20251651090 | Srikanta Nayak |
+| 20251651009 | Aditya Verma |
+| 20251651071 | Pratik Sinha |
+
+---
+
+## 1. Context and Partner Selection
+
+The selected external partner is a Government Disaster Alert System. The operation integrated at the contract level is `getActiveAlerts`, which retrieves active disaster alerts for a specified region.
+
+SOAP is suitable for this external integration because WSDL provides a formal service contract, document/literal messages define the XML data structure, and SOAP faults provide a structured way to communicate errors. The internal APIs of the Disaster Resource Coordination Platform can continue using REST.
+
+**Operation:** `getActiveAlerts`
+
+**Input:**
+- `regionCode`: Required string identifying the region.
+- `since`: Optional date and time specifying the starting point for alert retrieval.
+
+**Output:** A list of active alerts containing alert ID, hazard type, severity, region code, message, issue time, and optional expiry time.
+
+**Note:** This is a design-time example. The endpoint used in this document is illustrative and is not a verified live government service.
+
+## 2. HTTP Binding
+
+The WSDL defines SOAP 1.1 over HTTP using document/literal style. The SOAP request is sent using an HTTP POST request to the endpoint specified in the WSDL service and port.
+
+### HTTP Request
+
+```http
+POST /soap/DisasterAlertService HTTP/1.1
+Host: alerts.partner.example
+Content-Type: text/xml; charset=utf-8
+SOAPAction: "https://api.disaster-coordination.example/alerts/getActiveAlerts"
+
+[Contents of soap-request.xml]
+```
+
+**Endpoint URL:**
+
+`https://alerts.partner.example/soap/DisasterAlertService`
+
+The SOAPAction value is defined in the WSDL binding. The SOAP envelope is sent as the HTTP request body. The HTTP client calculates the Content-Length from the serialized request.
+
+The credentials in the example request are placeholders. Real credentials must be stored securely and must not be committed to the source-code repository.
+
+## 3. Discovery and Registry Entry
+
+The Disaster Resource Coordination Platform can discover the external partner through a trusted service catalogue or a direct WSDL URL provided by the partner.
+
+During onboarding, the team reviews the WSDL contract, confirms the endpoint, and records the contract version. A live UDDI server is not required for this assignment.
+
+### Illustrative Registry Entry
+
+| Field | Value |
+|---|---|
+| Business | Government Disaster Alert Provider (Example) |
+| Service | GovernmentDisasterAlertService |
+| Endpoint | `https://alerts.partner.example/soap/DisasterAlertService` |
+| WSDL / tModel-style pointer | `https://alerts.partner.example/contracts/DisasterAlertService.wsdl` |
+| Operation | `getActiveAlerts` |
+
+This registry entry is illustrative and does not represent a verified real-world government service.
+
+## 4. Fault Mapping
+
+The external partner may return a SOAP fault with the code `PROVIDER_UNAVAILABLE` when its alert feed is temporarily unavailable.
+
+The Disaster Alert Integration Service (S4) translates this partner-specific fault into a stable error response defined by our platform.
+
+**Platform Error Response:**
+
+- HTTP Status: `503 Service Unavailable`
+- Error Code: `ALERT_PROVIDER_UNAVAILABLE`
+- Message: `Disaster alert provider is temporarily unavailable.`
+- Retryable: `true`
+
+The original partner fault is recorded in internal logs with a correlation ID. The raw SOAP fault details are not exposed directly to platform clients.
+
+If a cached alert snapshot is returned during an outage, the platform must include its retrieval timestamp and clearly mark the data as stale.
+
+This mapping ensures that external partner terminology does not leak into the platform's public API contract.
+
+## 5. Assumptions and Limitations
+
+The partner name, endpoint URLs, sample credentials, alert IDs, and alert data used in this assignment are illustrative. The `.example` domain is reserved for examples and is not a live service endpoint.
+
+No external SOAP request or live interoperability test has been performed. Before production integration, the team must confirm the partner's authentication policy, TLS requirements, WSDL/XSD compatibility, timeout and retry policy, and alert freshness requirements.
+
+## 6. Conclusion
+
+This design demonstrates how the Disaster Resource Coordination Platform can integrate an external disaster alert provider through a SOAP contract. The WSDL defines the operation, SOAP messages demonstrate the request and response formats, HTTP binding specifies how the request is transported, discovery explains how the contract can be located, and fault mapping maintains a consistent error contract within the platform.

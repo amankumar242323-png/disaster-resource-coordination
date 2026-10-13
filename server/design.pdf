@@ -1,0 +1,697 @@
+# Disaster Resource Coordination Platform — Web Services Project
+
+## Team Details
+
+**Group ID:** 02
+
+- Aman Kumar — 20251651017
+- Srikanta Nayak — 20251651090
+- Aditya Verma — 20251651009
+- Pratik Sinha — 20251651071
+
+## Project Overview
+
+The Disaster Resource Coordination Platform is a web services project designed to support disaster response, shelter management, field reporting, and emergency resource coordination. It demonstrates REST APIs, GraphQL interfaces, service integration, external SOAP/WSDL communication, request validation, service contracts, authentication, and error handling.
+
+The platform consists of six logically separated services: Shelter & Inventory Service, Field Report Service, Resource Request & Transfer Service, Disaster Alert Integration Service, Identity & Access Service, and API & Coordination Query Service.
+
+The frontend uses React.js, while the backend uses Node.js and Express.js. PostgreSQL is used for data storage. The platform supports shelter registration and search, inventory management, field report submission, resource requests and approvals, disaster alert retrieval, and role-based access control.
+
+This project focuses on defining clear service boundaries, documenting service contracts, managing data ownership, and enabling reliable communication between services during disaster response operations.
+
+---
+
+# Task 1: System Capabilities
+
+The Disaster Resource Coordination Platform provides the following capabilities to support shelter management, disaster reporting, and emergency resource coordination.
+
+| ID | Capability | Description |
+|---|---|---|
+| C1 | **Register Shelters** | Allows Coordinators and Administrators to register shelters with their location, capacity, and contact details. |
+| C2 | **Manage Inventory** | Allows Shelter Staff to update and track available food, water, medicine, beds, and blankets. |
+| C3 | **Submit Field Reports** | Allows field personnel to submit situation reports and photo metadata, even when network connectivity is unreliable. |
+| C4 | **Request Resources** | Allows Shelter Staff to request resources by specifying the resource type, required quantity, and urgency. |
+| C5 | **Approve Resource Transfers** | Allows Coordinators to approve, deny, or fulfill resource-transfer requests while preventing duplicate approvals. |
+| C6 | **Retrieve Disaster Alerts** | Retrieves disaster declarations and weather alerts from an external government SOAP/WSDL service. |
+| C7 | **Monitor Shelter Status** | Allows Coordinators to view aggregated shelter status, inventory information, and recent field reports. |
+| C8 | **Search Shelters** | Allows users to find shelters using location, shelter status, and resource availability filters. |
+| C9 | **Authenticate Users** | Verifies user identities using JWT-based authentication and manages role-based access permissions. |
+| C10 | **Expose Data Through APIs** | Provides shelter, inventory, report, resource-request, and alert information through REST and GraphQL interfaces. |
+| C11 | **Control API Traffic** | Applies configurable rate limits and returns appropriate responses when clients exceed their limits. |
+| C12 | **Audit and Trace Operations** | Maintains relevant audit records and structured logs using correlation IDs to support traceability and troubleshooting. |
+
+## Summary
+
+These capabilities describe the major jobs performed by the Disaster Resource Coordination Platform. They cover shelter and inventory management, field reporting, resource coordination, disaster-alert integration, data access, security, and operational monitoring.
+
+---
+
+# Task 2: Service Design and Service Boundaries
+
+## 2.1 Introduction
+
+The Disaster Resource Coordination Platform is organized into six logically separated services. Each service has a clearly defined responsibility and manages its own data. Services communicate through published operations instead of directly accessing another service's private data.
+
+The frontend is developed using React.js, and the backend uses Node.js and Express.js. PostgreSQL is used as the database. The six services are logical modules within one backend application; they are not independently deployed microservices.
+
+## 2.2 Service Responsibilities and Data Ownership
+
+| Service | Service Name | Responsibility | Data Owned | Team Member |
+|---|---|---|---|---|
+| S1 | Shelter & Inventory Service | Registers shelters, manages shelter information, tracks inventory, and reserves resources. | Shelter profiles, inventory balances, inventory history, resource reservations | To be assigned |
+| S2 | Field Report Service | Accepts and manages field reports and associated photo metadata. | Field reports, photo metadata, report idempotency records | To be assigned |
+| S3 | Resource Request & Transfer Service | Creates resource requests, manages approval decisions, and tracks transfer fulfillment. | Resource requests, transfer decisions, transfer records | To be assigned |
+| S4 | Disaster Alert Integration Service | Integrates with external disaster-alert systems and provides normalized alert information. | Normalized alerts, alert snapshots, integration state | To be assigned |
+| S5 | Identity & Access Service | Authenticates users and manages roles, permissions, and shelter assignments. | User accounts, roles, shelter assignments, refresh sessions | To be assigned |
+| S6 | API & Coordination Query Service | Exposes REST and GraphQL APIs and coordinates queries across services. | API configuration and query-cache metadata, if required | To be assigned |
+
+**Note:** The group should finalize the team-member assignments for each service.
+
+## 2.3 Service Communication
+
+| Calling Component | Target Component | Operation | Purpose |
+|---|---|---|---|
+| React Frontend | S6 — API & Coordination Query Service | REST API / GraphQL query | Sends client requests and retrieves authorized information |
+| S6 — API & Coordination Query Service | S5 — Identity & Access Service | `authorizeRequest` | Checks user permissions |
+| S6 — API & Coordination Query Service | S1 — Shelter & Inventory Service | `searchShelters`, `getInventory` | Retrieves shelter and inventory information |
+| S6 — API & Coordination Query Service | S2 — Field Report Service | `submitReport`, `listRecentReports` | Submits and retrieves field reports |
+| S6 — API & Coordination Query Service | S3 — Resource Request & Transfer Service | `createResourceRequest`, `listResourceRequests` | Creates and retrieves resource requests |
+| S6 — API & Coordination Query Service | S4 — Disaster Alert Integration Service | `getActiveAlerts` | Retrieves active disaster alerts |
+| S2 — Field Report Service | S1 — Shelter & Inventory Service | `getShelter` | Validates a shelter reference when required |
+| S3 — Resource Request & Transfer Service | S1 — Shelter & Inventory Service | `reserveResources` | Reserves available resources after approval |
+| S4 — Disaster Alert Integration Service | External Government Alert System | SOAP/WSDL request | Retrieves external disaster-alert information |
+
+## 2.4 Service Boundary Rules
+
+1. **Single data owner:** Each business table belongs to exactly one service.
+2. **Contract-based communication:** Services communicate using published operations with defined inputs, outputs, and errors.
+3. **No direct private-data access:** A service must not directly query or modify another service's private tables.
+4. **Controlled resource reservation:** The Resource Request & Transfer Service must use the Shelter & Inventory Service's `reserveResources` operation instead of directly updating inventory data.
+5. **External integration isolation:** SOAP/WSDL communication is handled by the Disaster Alert Integration Service.
+6. **Centralized API access:** The API & Coordination Query Service provides client-facing REST and GraphQL interfaces and applies authorization and rate limits.
+7. **Failure handling:** A failed downstream operation must be handled explicitly without falsely reporting successful completion.
+
+PostgreSQL may be used by all logical modules as shared database infrastructure, but shared infrastructure does not imply shared ownership of tables. Cross-service references do not grant permission to access another service's private data.
+
+## 2.5 Service Design Diagram
+
+The service design diagram represents the six services as separate boxes. Each box should include the service name, its responsibility, its data ownership, and the assigned team member.
+
+Draw arrows between components and label every arrow with the corresponding operation. Include the React Frontend and the external Government SOAP/WSDL Alert System as external components.
+
+**Insert Service Design Diagram Here**
+
+**Figure 1: Service Design Diagram of the Disaster Resource Coordination Platform**
+
+Files to submit:
+
+- `services.drawio` — Editable service design diagram.
+- `services.png` or `services.pdf` — Exported diagram for submission.
+
+## 2.6 Conclusion
+
+The proposed service design establishes clear responsibilities and data ownership for the Disaster Resource Coordination Platform. Contract-based communication reduces direct dependencies between modules and supports maintainability, controlled access, and reliable disaster-response coordination.
+
+---
+
+# Task 3: Service Contracts
+
+## 3.1 Introduction
+
+A service contract defines the operations that a service exposes to other services or authorized clients. Each contract specifies the operation name, required input, expected output, and possible errors.
+
+The platform uses a Node.js/Express backend organized into six logically separated services and PostgreSQL for data storage. Each service owns its data and exposes operations through its contract. Other services must not directly access its private data.
+
+The following contracts represent the proposed system design.
+
+## 3.2 S1 — Shelter & Inventory Service
+
+**Responsibility:** Manages shelter profiles, capacity, resource availability, and inventory updates.
+
+| Operation | Input | Output | Errors |
+|---|---|---|---|
+| `registerShelter` | Shelter name, location, capacity, contact details | Registration confirmation and shelter summary | 400 Invalid input; 409 Duplicate registration |
+| `getShelter` | Shelter reference, user access context | Shelter profile and current status | 403 Forbidden; 404 Shelter not found |
+| `searchShelters` | Location, minimum capacity, status, pagination | Matching shelter summaries and pagination details | 400 Invalid filters |
+| `getInventory` | Shelter reference, resource categories | Resource availability and last-updated timestamp | 403 Forbidden; 404 Shelter not found |
+| `updateInventory` | Shelter reference, resource changes, update reference | Updated inventory summary | 400 Invalid input; 409 Conflicting update; 422 Invalid quantity |
+| `reserveResources` | Shelter reference, resource category, quantity, transfer reference | Reservation result and remaining availability | 404 Shelter/resource not found; 409 Insufficient stock or duplicate reservation |
+
+**Contract Rule:** The Shelter & Inventory Service validates inventory changes and confirms availability before accepting a reservation.
+
+## 3.3 S2 — Field Report Service
+
+**Responsibility:** Accepts, retrieves, and lists field reports while supporting safe retries when network connectivity is unreliable.
+
+| Operation | Input | Output | Errors |
+|---|---|---|---|
+| `submitReport` | Shelter reference, idempotency key, situation description, photo metadata, report timestamp | Report confirmation, report summary, and status | 400 Invalid input; 403 Forbidden; 409 Key reused with different content |
+| `getReport` | Report reference, user access context | Report details and status | 403 Forbidden; 404 Report not found |
+| `listReports` | Filters, date range, pagination, access context | Matching reports and pagination details | 400 Invalid filters; 403 Forbidden |
+| `listRecentReports` | Authorized scope, time window, result limit | Recent report summaries | 400 Invalid parameters; 403 Forbidden |
+
+**Contract Rule:** Retrying a submission with the same idempotency key and the same content returns the original result. Reusing the key with different content returns a conflict.
+
+## 3.4 S3 — Resource Request & Transfer Service
+
+**Responsibility:** Manages resource requests, approval decisions, and transfer fulfillment.
+
+| Operation | Input | Output | Errors |
+|---|---|---|---|
+| `createResourceRequest` | Shelter reference, resource category, quantity, urgency, notes | Request confirmation and current status | 400 Invalid input; 403 Forbidden; 422 Invalid request |
+| `getResourceRequest` | Request reference, user access context | Request details and workflow status | 403 Forbidden; 404 Request not found |
+| `listResourceRequests` | Status, urgency, shelter scope, pagination | Matching request summaries | 400 Invalid filters; 403 Forbidden |
+| `decideResourceRequest` | Request reference, approve/reject decision, reason, idempotency reference | Decision confirmation and updated status | 403 Forbidden; 404 Request not found; 409 Already decided |
+| `fulfillTransfer` | Request reference, transfer reference, fulfillment details | Fulfillment confirmation and final status | 403 Forbidden; 404 Request not found; 409 Already fulfilled; 422 Invalid workflow state |
+
+**Contract Rule:** Only authorized Coordinators or Administrators may perform permitted approval decisions. Duplicate approvals and fulfillment must not create duplicate transfers. A transfer must not be marked fulfilled if resource reservation fails.
+
+## 3.5 S4 — Disaster Alert Integration Service
+
+**Responsibility:** Retrieves external disaster alerts and provides usable alert information to the platform.
+
+| Operation | Input | Output | Errors |
+|---|---|---|---|
+| `getActiveAlerts` | Location, severity, alert status filters | Active alert summaries, source timestamp, and freshness indicator | 400 Invalid filters; 503 No usable alert data |
+| `getAlertById` | Alert reference | Alert details and source information | 404 Alert not found |
+| `refreshAlerts` | Refresh request and execution context | Refresh result, last successful update, and integration status | 503 External feed unavailable; 504 External request timed out |
+| `getIntegrationHealth` | Optional health-check context | Integration status and last successful refresh time | 503 Integration unavailable |
+
+**Contract Rule:** The service integrates with the external government feed through SOAP/WSDL. If the feed becomes unavailable, it should use its last-known-good snapshot when available and indicate whether the information is stale.
+
+## 3.6 S5 — Identity & Access Service
+
+**Responsibility:** Authenticates users and enforces role-based and shelter-scoped access permissions.
+
+| Operation | Input | Output | Errors |
+|---|---|---|---|
+| `authenticateUser` | Login credentials | Access token, expiry, and permitted user profile | 400 Invalid input; 401 Invalid credentials |
+| `refreshAccessToken` | Valid refresh token | New access token, expiry, and rotated refresh token when enabled | 401 Invalid or expired token |
+| `authorizeRequest` | Authenticated user context, requested permission, optional shelter scope | Authorization decision and permitted scope | 401 Unauthenticated; 403 Permission denied |
+| `getUserPermissions` | Authenticated user context | Roles and permitted actions | 401 Unauthenticated; 403 Forbidden |
+| `assignShelter` | User reference, shelter reference, assignment details, authorized actor | Assignment confirmation | 403 Forbidden; 404 User or shelter not found; 409 Conflicting assignment |
+
+**Contract Rule:** The service supports Shelter Staff, Coordinator, Public Viewer, and Admin roles. Public Viewers may access only permitted, non-sensitive information.
+
+## 3.7 S6 — API & Coordination Query Service
+
+**Responsibility:** Exposes REST and GraphQL interfaces, coordinates requests to other services, and applies API-level controls.
+
+| Operation | Input | Output | Errors |
+|---|---|---|---|
+| `getShelters` | Search filters, pagination, optional conditional request headers | Shelter summaries, pagination information, and applicable cache headers | 400 Invalid filters; 401 Unauthenticated; 429 Rate limit exceeded |
+| `getShelterInventory` | Shelter reference, optional conditional request headers | Inventory summary and applicable cache headers | 403 Forbidden; 404 Shelter not found; 429 Rate limit exceeded |
+| `submitFieldReport` | Report payload, idempotency key, authentication context | Report confirmation and current status | 400 Invalid input; 401 Unauthenticated; 403 Forbidden; 409 Idempotency conflict; 429 Rate limit exceeded |
+| `getCoordinationDashboard` | GraphQL query, variables, authentication context | Authorized composite view of shelters, alerts, and resource requests | 400 Invalid query; 401 Unauthenticated; 403 Forbidden; 429 Rate limit exceeded |
+| `getDisasterAlerts` | Alert filters and authentication context | Alert results with freshness information | 400 Invalid filters; 503 Alert dependency unavailable |
+| `getResourceRequests` | Request filters, pagination, authentication context | Authorized resource request summaries | 400 Invalid filters; 403 Forbidden; 429 Rate limit exceeded |
+
+**Contract Rule:** The API layer enforces authorization, pagination, rate limits, and appropriate ETag/Cache-Control headers. GraphQL requests are subject to query-complexity limits. The API layer accesses business data through service operations rather than bypassing service ownership.
+
+## 3.8 Common Error Response
+
+All services should use a consistent and safe error response structure.
+
+Example:
+
+```json
+{
+  "error": {
+    "code": "RESOURCE_CONFLICT",
+    "message": "The requested operation could not be completed."
+  },
+  "correlationId": "request-correlation-reference"
+}
+```
+
+The platform uses suitable HTTP status codes, including:
+
+- **400 — Bad Request:** Invalid input or request parameters.
+- **401 — Unauthorized:** Missing or invalid authentication.
+- **403 — Forbidden:** The user lacks permission.
+- **404 — Not Found:** The requested resource does not exist.
+- **409 — Conflict:** The request conflicts with the current state.
+- **422 — Unprocessable Content:** The input violates a business rule.
+- **429 — Too Many Requests:** The client has exceeded its rate limit.
+- **503 — Service Unavailable:** A required service or dependency is unavailable.
+- **504 — Gateway Timeout:** An external dependency did not respond within the permitted time.
+
+Error messages must not expose private implementation details, credentials, or secrets.
+
+## 3.9 Service Contract Summary
+
+| Service | Number of Operations | Primary Responsibility |
+|---|---:|---|
+| S1 — Shelter & Inventory | 6 | Shelter registration, search, inventory, and reservations |
+| S2 — Field Report | 4 | Report submission, retrieval, and listing |
+| S3 — Resource Request & Transfer | 5 | Request creation, decisions, and fulfillment |
+| S4 — Disaster Alert Integration | 4 | Alert retrieval and external-feed health |
+| S5 — Identity & Access | 5 | Authentication, authorization, and assignments |
+| S6 — API & Coordination Query | 6 | REST/GraphQL access and coordination queries |
+
+The two main services, S1 and S2, each expose at least three operations. All remaining services expose at least one operation, satisfying the assignment's minimum operation requirements.
+
+## 3.10 Conclusion
+
+The service contracts establish clear boundaries between the six services of the Disaster Resource Coordination Platform. Each service has a defined responsibility, explicit inputs and outputs, and documented error cases. This design supports modular development, controlled access to data, reliable operation retries, and reduced coupling between services.
+
+---
+
+# Task 4: Detailed Specification of the Central Operation
+
+## 4.1 Operation Name
+
+**Operation:** `coordinateResourceRequest`
+
+**Responsible Service:** S3 — Resource Request & Transfer Service
+
+**Purpose:** The `coordinateResourceRequest` operation coordinates the processing of an emergency resource request. It validates the request, checks authorization, manages the approval workflow, coordinates resource reservation with the Shelter & Inventory Service, and returns the current request status.
+
+## 4.2 Input
+
+The operation accepts the following information:
+
+| Input Parameter | Description | Required |
+|---|---|---|
+| Shelter reference | Identifies the shelter requesting resources | Yes |
+| Resource category | Type of resource required, such as food, water, medicine, beds, or blankets | Yes |
+| Quantity | Number of resource units requested; must be greater than zero | Yes |
+| Urgency | Priority level of the request | Yes |
+| Request notes | Additional information explaining the need | No |
+| Requester context | Authenticated user and permission context | Yes |
+| Idempotency reference | Allows safe retries without creating duplicate requests | Yes |
+
+## 4.3 Output
+
+When the operation succeeds, it returns a structured response containing:
+
+| Output Field | Description |
+|---|---|
+| Request summary | Summary of the resource request |
+| Current status | Current workflow status, such as Pending Approval, Approved, Rejected, or Fulfilled |
+| Decision summary | Approval or rejection information, when a decision has been made |
+| Reservation result | Result of the resource reservation, when applicable |
+| Message | Human-readable confirmation of the result |
+| Correlation reference | Reference used to trace the request across services |
+
+The response must not expose database details, internal table names, SQL statements, or private implementation information.
+
+## 4.4 Processing Workflow
+
+The operation follows these steps:
+
+1. **Validate input:** Check that required fields are present, the quantity is positive, and the urgency value is permitted.
+2. **Authenticate and authorize:** Verify the caller's identity and confirm that the caller can request or manage resources for the specified shelter.
+3. **Check for duplicate requests:** Use the idempotency reference to identify retries and prevent duplicate request creation.
+4. **Create or retrieve the request:** Create a new resource request or return the existing result for a matching retry.
+5. **Apply the approval workflow:** Keep the request pending until an authorized Coordinator or Administrator makes the permitted decision.
+6. **Reserve resources when appropriate:** After approval, call the Shelter & Inventory Service through its `reserveResources` operation.
+7. **Handle reservation results:** If reservation succeeds, record the reservation result and update the workflow status. If reservation fails, do not mark the transfer as fulfilled.
+8. **Return the response:** Return the request summary, current status, reservation result when applicable, and correlation reference.
+
+A request is not automatically fulfilled merely because it has been approved. Fulfillment must follow the platform's transfer workflow.
+
+## 4.5 Cross-Service Communication
+
+The operation interacts with other services through their published contracts.
+
+| Calling Service | Target Service | Operation | Purpose |
+|---|---|---|---|
+| S6 — API & Coordination Query Service | S5 — Identity & Access Service | `authorizeRequest` | Verifies the caller's permissions |
+| S6 — API & Coordination Query Service | S3 — Resource Request & Transfer Service | `createResourceRequest` | Creates a resource request |
+| S3 — Resource Request & Transfer Service | S1 — Shelter & Inventory Service | `reserveResources` | Reserves the required resources after approval |
+| S3 — Resource Request & Transfer Service | S1 — Shelter & Inventory Service | `getInventory` | Checks availability when required by the workflow |
+
+These calls use service contracts rather than direct access to another service's private data.
+
+## 4.6 Error Handling
+
+| Error | HTTP Status | Description |
+|---|---:|---|
+| Invalid input | 400 | Required fields are missing or values are invalid |
+| Unauthenticated caller | 401 | Authentication is missing or invalid |
+| Permission denied | 403 | The caller cannot perform the requested action |
+| Shelter or request not found | 404 | The referenced resource does not exist or is inaccessible |
+| Duplicate or conflicting request | 409 | The operation conflicts with an existing request or decision |
+| Business-rule violation | 422 | The request violates a business rule, such as a non-positive quantity |
+| Rate limit exceeded | 429 | The caller has exceeded the permitted request rate |
+| Inventory service unavailable | 503 | The required inventory operation cannot be completed |
+| Dependency timeout | 504 | A required downstream operation timed out |
+
+If resource reservation fails, the operation must return an appropriate failure or pending outcome. It must not report successful fulfillment when no successful reservation has been confirmed.
+
+## 4.7 Reliability and Consistency
+
+The operation follows these reliability rules:
+
+- **Idempotency:** Repeated requests with the same idempotency reference and same input must not create duplicate requests.
+- **Duplicate-decision protection:** A request must not be approved or rejected more than once through conflicting decisions.
+- **Stock validation:** The Shelter & Inventory Service must validate available stock when reserving resources.
+- **Safe retries:** Transient failures may be retried without creating duplicate requests or reservations.
+- **Status consistency:** The request must not be marked fulfilled before the required resource reservation and fulfillment steps succeed.
+- **Traceability:** Each request should carry a correlation reference for structured logging and troubleshooting.
+- **Access control:** Only authorized roles may perform approval and fulfillment actions.
+
+Because the services are logically separated modules within one Express backend, database transactions can protect operations within an appropriate transaction boundary. Calls across modules must still handle failures and retries explicitly; a single atomic transaction must not be assumed to cover every service operation.
+
+## 4.8 Example Successful Response
+
+The following is an illustrative response showing the public contract, not an actual result from a running implementation.
+
+```json
+{
+  "request": {
+    "shelter": "Shelter summary",
+    "resourceCategory": "Water",
+    "quantity": 100,
+    "urgency": "High",
+    "status": "Approved"
+  },
+  "reservation": {
+    "status": "Reserved",
+    "message": "Resource reservation confirmed."
+  },
+  "message": "The resource request was processed successfully.",
+  "correlationId": "example-correlation-reference"
+}
+```
+
+The values above are examples. Actual field names and status values should be kept consistent with the final implementation.
+
+## 4.9 Conclusion
+
+The `coordinateResourceRequest` operation provides a controlled workflow for emergency resource coordination. It combines input validation, authorization, idempotency, approval, resource reservation, error handling, and traceability. By using published service contracts and keeping each service's data private, the operation supports reliable coordination while reducing coupling between services.
+
+---
+
+# Task 5: Database Schema and ER Diagram
+
+## 5.1 Introduction
+
+The database schema defines how the Disaster Resource Coordination Platform stores shelter information, inventory, field reports, resource requests, disaster alerts, user accounts, and API-related configuration.
+
+PostgreSQL is used as the relational database. The database design follows the six logical service boundaries so that every table has one clearly defined owner.
+
+The ER diagram identifies entities, attributes, primary keys, foreign keys, and relationships between entities.
+
+## 5.2 Database Schema by Service
+
+### S1 — Shelter & Inventory Service
+
+**Responsibility:** Manages shelter details, inventory balances, inventory history, and resource reservations.
+
+| Table | Important Columns | Purpose |
+|---|---|---|
+| `shelters` | `shelter_id`, `name`, `location`, `capacity`, `contact_details`, `status` | Stores shelter profiles and operational information |
+| `inventory_items` | `inventory_id`, `shelter_id`, `resource_category`, `quantity_available`, `last_updated` | Stores current resource availability at each shelter |
+| `inventory_history` | `history_id`, `inventory_id`, `quantity_change`, `change_reason`, `created_at` | Records inventory changes for traceability |
+| `resource_reservations` | `reservation_id`, `shelter_id`, `request_id`, `resource_category`, `quantity`, `status` | Tracks resources reserved for a request |
+
+**Primary keys:** `shelter_id`, `inventory_id`, `history_id`, and `reservation_id`, respectively.
+
+**Relationships:**
+
+- One shelter can have multiple inventory items.
+- One inventory item can have multiple inventory-history records.
+- One shelter can have multiple resource reservations.
+- `request_id` in `resource_reservations` is a reference to a request managed by S3. It does not transfer ownership of the request table to S1.
+
+### S2 — Field Report Service
+
+**Responsibility:** Stores field reports, photo metadata, and information needed to prevent duplicate report submissions.
+
+| Table | Important Columns | Purpose |
+|---|---|---|
+| `field_reports` | `report_id`, `shelter_id`, `reporter_id`, `description`, `severity`, `reported_at`, `status` | Stores situation reports submitted by field personnel |
+| `report_photos` | `photo_id`, `report_id`, `file_reference`, `content_type`, `created_at` | Stores photo metadata associated with reports |
+| `report_idempotency` | `idempotency_id`, `idempotency_key`, `report_id`, `created_at` | Prevents duplicate report creation during retries |
+
+**Primary keys:** `report_id`, `photo_id`, and `idempotency_id`, respectively.
+
+**Relationships:**
+
+- One field report can have multiple photo metadata records.
+- One report submission key identifies a retryable submission.
+- `shelter_id` and `reporter_id` refer to resources managed by other services. Their use does not make S2 the owner of shelter or user records.
+
+### S3 — Resource Request & Transfer Service
+
+**Responsibility:** Manages requests, approval decisions, and transfer fulfillment.
+
+| Table | Important Columns | Purpose |
+|---|---|---|
+| `resource_requests` | `request_id`, `shelter_id`, `requester_id`, `resource_category`, `quantity`, `urgency`, `status`, `created_at` | Stores resource requests from shelters |
+| `transfer_decisions` | `decision_id`, `request_id`, `decided_by`, `decision`, `reason`, `decided_at` | Records approval or rejection decisions |
+| `resource_transfers` | `transfer_id`, `request_id`, `decision_id`, `status`, `fulfilled_at` | Tracks the fulfillment of approved requests |
+
+**Primary keys:** `request_id`, `decision_id`, and `transfer_id`, respectively.
+
+**Relationships:**
+
+- One resource request may have multiple decision records if decision history is retained.
+- A resource request may have a transfer record when fulfillment is initiated.
+- Each transfer must refer to a valid request.
+- If the design permits only one final decision or one transfer per request, appropriate uniqueness constraints must enforce that rule.
+
+### S4 — Disaster Alert Integration Service
+
+**Responsibility:** Stores normalized alerts and maintains information about external-feed availability.
+
+| Table | Important Columns | Purpose |
+|---|---|---|
+| `disaster_alerts` | `alert_id`, `source_alert_ref`, `title`, `severity`, `location`, `issued_at`, `expires_at`, `status` | Stores normalized disaster alerts |
+| `alert_snapshots` | `snapshot_id`, `payload_reference`, `source_timestamp`, `retrieved_at` | Keeps a last-known-good representation of alert data |
+| `integration_state` | `integration_id`, `last_successful_refresh`, `circuit_state`, `last_good_snapshot_id` | Tracks the external integration's operational state |
+
+**Primary keys:** `alert_id`, `snapshot_id`, and `integration_id`, respectively.
+
+**Relationships:**
+
+- The integration state can reference a last-known-good snapshot.
+- Alert data is retrieved through the SOAP/WSDL adapter and exposed through the alert service's published operations.
+- If the external feed is unavailable, the service should indicate whether returned alert data is stale.
+
+### S5 — Identity & Access Service
+
+**Responsibility:** Manages user identities, roles, shelter assignments, and refresh sessions.
+
+| Table | Important Columns | Purpose |
+|---|---|---|
+| `users` | `user_id`, `name`, `email`, `password_hash`, `status` | Stores user account information |
+| `roles` | `role_id`, `role_name`, `description` | Defines available roles |
+| `user_roles` | `user_id`, `role_id` | Associates users with roles |
+| `shelter_assignments` | `assignment_id`, `user_id`, `shelter_id`, `assignment_role`, `status` | Associates users with shelter responsibilities |
+| `refresh_sessions` | `session_id`, `user_id`, `token_hash`, `expires_at`, `revoked_at` | Supports refresh-token lifecycle management |
+
+**Primary keys:** `user_id`, `role_id`, `assignment_id`, and `session_id` for their respective tables. The `user_roles` table can use a composite primary key consisting of `user_id` and `role_id`.
+
+**Relationships:**
+
+- A user can have multiple roles.
+- A role can be assigned to multiple users.
+- A user can have multiple shelter assignments.
+- A user can have multiple refresh sessions over time.
+
+Passwords must be stored as secure password hashes, not as plain text. Refresh tokens should be handled securely.
+
+### S6 — API & Coordination Query Service
+
+**Responsibility:** Manages API-level configuration and optional query-cache metadata. It does not own shelter, report, request, alert, or identity business records.
+
+| Table | Important Columns | Purpose |
+|---|---|---|
+| `api_config` | `config_id`, `config_key`, `config_value`, `updated_at` | Stores API configuration, where database-backed configuration is required |
+| `query_cache_metadata` | `cache_id`, `cache_key`, `etag`, `expires_at`, `created_at` | Stores metadata used for query caching, where caching is implemented |
+
+**Primary keys:** `config_id` and `cache_id`, respectively.
+
+These tables are optional implementation choices. If API configuration and cache metadata are maintained outside PostgreSQL, the corresponding tables may be omitted from the final schema.
+
+## 5.3 Primary Keys and Foreign Keys
+
+Primary keys uniquely identify records within their respective tables. Internal foreign keys enforce relationships between tables owned by the same service.
+
+Examples of internal relationships include:
+
+- `inventory_items.shelter_id` references `shelters.shelter_id`.
+- `inventory_history.inventory_id` references `inventory_items.inventory_id`.
+- `report_photos.report_id` references `field_reports.report_id`.
+- `transfer_decisions.request_id` references `resource_requests.request_id`.
+- `resource_transfers.request_id` references `resource_requests.request_id`.
+- `user_roles.user_id` references `users.user_id`.
+- `user_roles.role_id` references `roles.role_id`.
+- `refresh_sessions.user_id` references `users.user_id`.
+
+Cross-service references, such as a report's shelter reference or a reservation's resource-request reference, must respect service ownership. The implementation should validate them through service operations or another explicitly designed mechanism rather than using direct access to another service's private tables.
+
+## 5.4 Data Ownership and Integrity Rules
+
+1. Each table has exactly one owning service.
+2. Internal foreign keys are used for relationships between tables owned by the same service.
+3. Cross-service references do not grant direct access to another service's private data.
+4. Inventory quantities must not become negative.
+5. Resource requests must have a positive quantity and a valid workflow status.
+6. Duplicate report submissions and duplicate resource reservations must be prevented through idempotency and suitable uniqueness constraints.
+7. A transfer must not be marked fulfilled unless the required reservation and fulfillment steps have succeeded.
+8. User credentials and refresh tokens must be stored securely.
+9. Derived or cached values, such as available capacity or inventory summaries, must be kept consistent with their source data.
+10. Timestamps should be stored consistently, preferably using PostgreSQL's `TIMESTAMPTZ` type for time-zone-aware timestamps.
+
+## 5.5 ER Diagram
+
+The ER diagram should contain all tables included in the final `schema.sql` file. Each entity box must show its table name, columns, data types, and primary-key or foreign-key markers.
+
+Use solid relationship lines for internal relationships within a service. Use clearly distinguished dashed lines or labelled references for cross-service relationships, where appropriate, to show that the referenced data is owned by another service.
+
+The diagram must also identify the service that owns each table. No table should appear to be owned by two services.
+
+**Insert Database ER Diagram Here**
+
+**Figure 2: Database ER Diagram of the Disaster Resource Coordination Platform**
+
+Files to submit:
+
+- `schema.drawio` — Editable ER diagram.
+- `schema.png` or `schema.pdf` — Exported ER diagram.
+- `schema.sql` — PostgreSQL schema definition corresponding to the final diagram.
+
+**Consistency requirement:** The final diagram and SQL script must agree on table names, column names, data types, primary keys, foreign keys, and uniqueness constraints. The script should be tested against PostgreSQL before submission.
+
+## 5.6 Conclusion
+
+The proposed database schema separates shelter management, field reporting, resource coordination, disaster-alert integration, identity management, and API configuration. Explicit table ownership and carefully defined relationships help maintain data integrity while supporting the modular service design of the Disaster Resource Coordination Platform.
+
+---
+
+# Task 6: Service Validation
+
+## 6.1 Introduction
+
+This task evaluates the proposed services of the Disaster Resource Coordination Platform against five service-design properties: reachability, self-containment, contract definition, independence, and loose coupling.
+
+The system contains six logically separated services implemented within a Node.js/Express backend. The validation below assesses the proposed architecture. It does not claim that all properties have already been verified through running-system tests.
+
+## 6.2 Validation Criteria
+
+| Property | Meaning |
+|---|---|
+| Reachable | The service can be accessed through a defined interface or operation. |
+| Self-contained | The service has a clearly defined responsibility and owns its data. |
+| Has a Contract | The service defines its operations, inputs, outputs, and possible errors. |
+| Independent | The service manages its responsibility without directly depending on another service's private data. |
+| Loosely Coupled | Services communicate through stable contracts rather than depending on each other's internal implementation. |
+
+## 6.3 Service Validation Table
+
+| Service | Reachable | Self-contained | Has a Contract | Independent | Loosely Coupled |
+|---|---|---|---|---|---|
+| S1 — Shelter & Inventory | Yes, through defined operations | Yes, owns shelter and inventory data | Yes, operations and errors are documented | Mostly; inventory reservation is coordinated with resource requests | Yes, if other services use published operations |
+| S2 — Field Report | Yes, through defined operations | Yes, owns report data and metadata | Yes, submission and retrieval operations are documented | Mostly; shelter references may need validation through S1 | Yes, if it avoids direct access to S1's private data |
+| S3 — Resource Request & Transfer | Yes, through defined operations | Yes, owns requests, decisions, and transfers | Yes, request and transfer operations are documented | Partially; reservation depends on S1 | Yes, if reservation uses S1's published contract |
+| S4 — Disaster Alert Integration | Yes, through defined operations | Yes, owns normalized alert and integration data | Yes, alert and health operations are documented | Partially; fresh alert retrieval depends on the external feed | Yes, if external SOAP/WSDL details remain isolated |
+| S5 — Identity & Access | Yes, through defined operations | Yes, owns users, roles, and sessions | Yes, authentication and authorization operations are documented | Mostly; shelter-scoped permissions may require validation of shelter references | Yes, if other services use its authorization operations |
+| S6 — API & Coordination Query | Yes, through REST and GraphQL interfaces | Yes, for API-level coordination and configuration | Yes, client-facing operations are documented | Partially; composite queries depend on downstream services | Yes, if it communicates through published contracts |
+
+## 6.4 Identified Problems and Proposed Improvements
+
+### 1. Reachability
+
+**Potential problem:** A service may be unavailable if its endpoint is not registered correctly, the backend is not running, or a required dependency fails.
+
+**Proposed improvement:**
+
+- Define stable routes or operation interfaces.
+- Add health-check endpoints for operational monitoring.
+- Use appropriate timeouts and meaningful error responses.
+- Test each service operation independently and through the API layer.
+
+### 2. Self-Containment
+
+**Potential problem:** Self-containment is weakened if one service directly reads or updates another service's private tables.
+
+**Proposed improvement:**
+
+- Assign a single owner to every table.
+- Keep internal database operations within the owning service.
+- Use published service operations to retrieve or modify another service's resources.
+- Document the purpose and ownership of every table in the ER diagram.
+
+### 3. Contract Definition
+
+**Potential problem:** Missing or inconsistent operation definitions can lead to different services expecting different inputs, outputs, or error formats.
+
+**Proposed improvement:**
+
+- Document each operation's required parameters, response fields, and errors.
+- Use a consistent JSON error format with a correlation reference.
+- Keep operation names and response fields consistent across documentation and implementation.
+- Update the contracts whenever an interface changes.
+
+### 4. Independence
+
+**Potential problem:** A service may be unable to complete an operation when a required downstream service is unavailable.
+
+**Proposed improvement:**
+
+- Handle downstream failures explicitly.
+- Apply appropriate timeouts and bounded retries for transient failures.
+- Use idempotency to prevent duplicate operations during retries.
+- Do not mark a transfer as fulfilled until the required reservation and fulfillment steps have succeeded.
+- Use last-known-good alert data when available, while clearly indicating stale information.
+
+### 5. Loose Coupling
+
+**Potential problem:** Services become tightly coupled when they depend on private table structures, internal implementation details, or unstable response formats.
+
+**Proposed improvement:**
+
+- Communicate through published operations.
+- Keep SOAP/WSDL-specific implementation inside the Disaster Alert Integration Service.
+- Use stable request and response formats.
+- Include correlation IDs for tracing requests across services.
+- Avoid direct cross-service database access and unnecessary dependencies.
+
+## 6.5 Overall Assessment
+
+The proposed architecture defines six services with separate responsibilities, documented operations, and explicit data ownership. These boundaries provide a basis for reachability, self-containment, contract definition, independence, and loose coupling.
+
+However, the architecture alone does not prove that every property has been achieved in the running system. Actual validation requires implementation and testing.
+
+Because the six services are logical modules within one Express backend, they are not independently deployed microservices. A failure of the shared backend may affect several or all modules. Independent deployment and stronger process-level isolation would require additional architectural changes.
+
+The following tests should be performed during implementation:
+
+1. Verify that each service's defined operations can be reached.
+2. Verify that each service accesses only its own private tables.
+3. Test valid requests, invalid inputs, authorization failures, and missing resources.
+4. Test retries and duplicate requests using idempotency references.
+5. Simulate an unavailable external alert feed and verify stale-data handling.
+6. Simulate an inventory reservation failure and verify that the transfer is not incorrectly marked fulfilled.
+7. Verify that rate limits and consistent error responses work through the API layer.
+
+## 6.6 Conclusion
+
+The proposed Disaster Resource Coordination Platform establishes clear service boundaries, contracts, and data ownership. These design choices support modularity, maintainability, and controlled communication between services. The remaining step is to validate the properties through implementation, integration testing, and documented test results.
+
+---
+
+# Final Deliverables Checklist
+
+The following files should be prepared for submission:
+
+1. `design.pdf` — Project overview, Task 1 capabilities, Task 2 service design explanation, Task 3 service contracts, Task 4 central operation, Task 5 database schema explanation, and Task 6 service validation.
+2. `services.drawio` — Editable service design diagram.
+3. `services.png` or `services.pdf` — Exported service design diagram.
+4. `schema.drawio` — Editable database ER diagram.
+5. `schema.png` or `schema.pdf` — Exported database ER diagram.
+6. `schema.sql` — PostgreSQL schema definition matching the final ER diagram.
+
+## Final Verification Before Submission
+
+- Check that all six services are represented consistently in the document and service diagram.
+- Assign the actual team members responsible for each service.
+- Confirm that the diagram and SQL script use the same table and column names.
+- Confirm that each table has one owner and that cross-service relationships are clearly identified.
+- Test the SQL script in PostgreSQL.
+- Export readable diagrams with legible service names, columns, and relationship labels.
+- Clearly distinguish proposed design from functionality that has actually been implemented and tested.

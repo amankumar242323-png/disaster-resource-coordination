@@ -1,4 +1,4 @@
-# Disaster Resource Coordination 
+# Disaster Resource Coordination
 
 A web service that lets shelters, coordinators, field officers, and donors
 report and track disaster-relief resources (food, water, medicine, beds) in
@@ -16,7 +16,7 @@ disaster-resource-coordination/
 ├── README.md          ← you are here
 ├── docs/               ← design docs: brief, API contracts, architecture notes
 ├── server/             ← Node.js + Express backend (added as work progresses)
-└── client/             ← React frontend (added as work progresses)
+└── client/             ← React frontend (implemented with Vite, React 18, and offline resilience)
 ```
 
 ## Docs
@@ -42,5 +42,10 @@ disaster-resource-coordination/
 
 ## Local development
 
-Setup instructions will be added here once the `server/` and `client/`
-scaffolds are committed.
+### Frontend (React.js)
+```bash
+cd client
+npm install
+npm run dev
+```
+The client runs at `http://localhost:5173`. See [`client/README.md`](client/README.md) for details.

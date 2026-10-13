@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:tns="https://api.disaster-coordination.example/alerts"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="https://api.disaster-coordination.example/alerts"
+    name="GovernmentDisasterAlertService">
+
+    <!-- 1. TYPES: Request, Response and Fault data structures -->
+    <types>
+        <xsd:schema
+            targetNamespace="https://api.disaster-coordination.example/alerts"
+            elementFormDefault="qualified">
+
+            <xsd:element name="GetActiveAlertsRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="regionCode" type="xsd:string"/>
+                        <xsd:element name="since"
+                                     type="xsd:dateTime"
+                                     minOccurs="0"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="GetActiveAlertsResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="alerts">
+                            <xsd:complexType>
+                                <xsd:sequence>
+                                    <xsd:element name="alert"
+                                                minOccurs="0"
+                                                maxOccurs="unbounded">
+                                        <xsd:complexType>
+                                            <xsd:sequence>
+                                                <xsd:element name="alertId"
+                                                             type="xsd:string"/>
+                                                <xsd:element name="hazardType"
+                                                             type="xsd:string"/>
+                                                <xsd:element name="severity"
+                                                             type="xsd:string"/>
+                                                <xsd:element name="regionCode"
+                                                             type="xsd:string"/>
+                                                <xsd:element name="message"
+                                                             type="xsd:string"/>
+                                                <xsd:element name="issuedAt"
+                                                             type="xsd:dateTime"/>
+                                                <xsd:element name="expiresAt"
+                                                             type="xsd:dateTime"
+                                                             minOccurs="0"/>
+                                            </xsd:sequence>
+                                        </xsd:complexType>
+                                    </xsd:element>
+                                </xsd:sequence>
+                            </xsd:complexType>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="AlertServiceFaultDetail">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="code" type="xsd:string"/>
+                        <xsd:element name="message" type="xsd:string"/>
+                        <xsd:element name="retryable" type="xsd:boolean"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+        </xsd:schema>
+    </types>
+
+    <!-- 2. MESSAGES: Input, output and fault -->
+    <message name="GetActiveAlertsInput">
+        <part name="parameters"
+              element="tns:GetActiveAlertsRequest"/>
+    </message>
+
+    <message name="GetActiveAlertsOutput">
+        <part name="parameters"
+              element="tns:GetActiveAlertsResponse"/>
+    </message>
+
+    <message name="AlertServiceFault">
+        <part name="fault"
+              element="tns:AlertServiceFaultDetail"/>
+    </message>
+
+    <!-- 3. PORT TYPE: Service operation -->
+    <portType name="GovernmentDisasterAlertPortType">
+        <operation name="getActiveAlerts">
+            <input message="tns:GetActiveAlertsInput"/>
+            <output message="tns:GetActiveAlertsOutput"/>
+            <fault name="AlertServiceFault"
+                   message="tns:AlertServiceFault"/>
+        </operation>
+    </portType>
+
+    <!-- 4. BINDING: SOAP 1.1 over HTTP -->
+    <binding
+        name="GovernmentDisasterAlertSoapBinding"
+        type="tns:GovernmentDisasterAlertPortType">
+
+        <soap:binding
+            style="document"
+            transport="http://schemas.xmlsoap.org/soap/http"/>
+
+        <operation name="getActiveAlerts">
+            <soap:operation
+                soapAction="https://api.disaster-coordination.example/alerts/getActiveAlerts"/>
+
+            <input>
+                <soap:body use="literal"/>
+            </input>
+
+            <output>
+                <soap:body use="literal"/>
+            </output>
+
+            <fault name="AlertServiceFault">
+                <soap:fault
+                    name="AlertServiceFault"
+                    use="literal"/>
+            </fault>
+        </operation>
+    </binding>
+
+    <!-- 5 and 6. SERVICE AND PORT: Endpoint and binding -->
+    <service name="GovernmentDisasterAlertService">
+        <documentation>
+            Illustrative external disaster alert partner contract.
+            The endpoint is reserved for example purposes.
+        </documentation>
+
+        <port
+            name="GovernmentDisasterAlertPort"
+            binding="tns:GovernmentDisasterAlertSoapBinding">
+
+            <soap:address
+                location="https://alerts.partner.example/soap/DisasterAlertService"/>
+
+        </port>
+    </service>
+
+</definitions>

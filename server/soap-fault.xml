@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:al="https://api.disaster-coordination.example/alerts">
+
+    <soapenv:Header/>
+
+    <soapenv:Body>
+        <soapenv:Fault>
+            <faultcode>soapenv:Server</faultcode>
+            <faultstring>Alert provider temporarily unavailable</faultstring>
+            <detail>
+                <al:AlertServiceFaultDetail>
+                    <al:code>PROVIDER_UNAVAILABLE</al:code>
+                    <al:message>Alert feed is temporarily unavailable.</al:message>
+                    <al:retryable>true</al:retryable>
+                </al:AlertServiceFaultDetail>
+            </detail>
+        </soapenv:Fault>
+    </soapenv:Body>
+
+</soapenv:Envelope>
