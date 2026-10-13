@@ -1,3 +1,5 @@
+
+const crypto = require("node:crypto");
 const pool = require("../db");
 const Report = require("./models/report");
 
@@ -9,9 +11,19 @@ function mapRow(row) {
     reportType: row.report_type,
     severity: row.severity,
     description: row.description,
-    occupancyCount: row.occupancy_count,
+    occupancyCount:
+      row.occupancy_count === null
+        ? null
+        : Number(row.occupancy_count),
     createdAt: row.created_at,
   });
+}
+
+function makeEtag(report) {
+  return `"${crypto
+    .createHash("sha256")
+    .update(JSON.stringify(report.asJson()))
+    .digest("hex")}"`;
 }
 
 async function create(data, key, requestHash) {
@@ -20,7 +32,6 @@ async function create(data, key, requestHash) {
   try {
     await client.query("BEGIN");
 
-    // Serialize requests using the same idempotency key.
     await client.query(
       "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
       [key]
@@ -36,9 +47,8 @@ async function create(data, key, requestHash) {
 
     if (existing.rows.length > 0) {
       const record = existing.rows[0];
-      const isExpired = new Date(record.expires_at) <= new Date();
 
-      if (isExpired) {
+      if (new Date(record.expires_at) <= new Date()) {
         await client.query(
           "DELETE FROM reports.report_idempotency WHERE idempotency_key = $1",
           [key]
@@ -93,13 +103,15 @@ async function create(data, key, requestHash) {
     );
 
     await client.query("COMMIT");
-
     return { report, replayed: false };
   } catch (error) {
     try {
       await client.query("ROLLBACK");
     } catch (rollbackError) {
-      console.error("Transaction rollback failed:", rollbackError.message);
+      console.error(
+        "Transaction rollback failed:",
+        rollbackError.message
+      );
     }
 
     throw error;
@@ -135,7 +147,36 @@ async function findByKey(key) {
   };
 }
 
-async function list({ shelterId, severity, limit = 20 } = {}) {
+async function list({
+  shelterId,
+  severity,
+  limit = 20,
+  offset = 0,
+  sortBy = "reportId",
+  order = "desc",
+} = {}) {
+  const allowedSortColumns = {
+    reportId: "report_id",
+    createdAt: "created_at",
+    severity: "severity",
+  };
+
+  const sortColumn = allowedSortColumns[sortBy];
+
+  if (!sortColumn) {
+    const error = new Error("Invalid sortBy field");
+    error.status = 400;
+    throw error;
+  }
+
+  const normalizedOrder = String(order).toLowerCase();
+
+  if (!["asc", "desc"].includes(normalizedOrder)) {
+    const error = new Error("Invalid sort order");
+    error.status = 400;
+    throw error;
+  }
+
   const conditions = [];
   const values = [];
 
@@ -149,21 +190,116 @@ async function list({ shelterId, severity, limit = 20 } = {}) {
     conditions.push(`severity = $${values.length}`);
   }
 
-  values.push(limit);
-
   const where = conditions.length
     ? `WHERE ${conditions.join(" AND ")}`
     : "";
 
+  values.push(limit);
+  const limitPlaceholder = `$${values.length}`;
+
+  values.push(offset);
+  const offsetPlaceholder = `$${values.length}`;
+
   const result = await pool.query(
     `SELECT * FROM reports.field_reports
      ${where}
-     ORDER BY report_id DESC
-     LIMIT $${values.length}`,
+     ORDER BY ${sortColumn} ${normalizedOrder.toUpperCase()}, report_id DESC
+     LIMIT ${limitPlaceholder}
+     OFFSET ${offsetPlaceholder}`,
     values
   );
 
   return result.rows.map(mapRow);
 }
 
-module.exports = { create, find, findByKey, list };
+async function update(id, patch, expectedEtag) {
+  const allowedColumns = {
+    reportType: "report_type",
+    severity: "severity",
+    description: "description",
+    occupancyCount: "occupancy_count",
+  };
+
+  const fields = Object.keys(patch);
+
+  if (fields.length === 0) {
+    const error = new Error("PATCH body must contain at least one field");
+    error.status = 400;
+    throw error;
+  }
+
+  for (const field of fields) {
+    if (!Object.prototype.hasOwnProperty.call(allowedColumns, field)) {
+      const error = new Error(`Field '${field}' cannot be updated`);
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const selected = await client.query(
+      `SELECT *
+       FROM reports.field_reports
+       WHERE report_id = $1
+       FOR UPDATE`,
+      [id]
+    );
+
+    if (!selected.rows.length) {
+      await client.query("COMMIT");
+      return null;
+    }
+
+    const current = mapRow(selected.rows[0]);
+    const currentEtag = makeEtag(current);
+
+    if (currentEtag !== expectedEtag) {
+      await client.query("COMMIT");
+      return false;
+    }
+
+    const values = [];
+    const assignments = fields.map((field) => {
+      values.push(patch[field]);
+      return `${allowedColumns[field]} = $${values.length}`;
+    });
+
+    values.push(id);
+
+    const result = await client.query(
+      `UPDATE reports.field_reports
+       SET ${assignments.join(", ")}
+       WHERE report_id = $${values.length}
+       RETURNING *`,
+      values
+    );
+
+    await client.query("COMMIT");
+    return mapRow(result.rows[0]);
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      console.error(
+        "Transaction rollback failed:",
+        rollbackError.message
+      );
+    }
+
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = {
+  create,
+  find,
+  findByKey,
+  list,
+  update,
+};
