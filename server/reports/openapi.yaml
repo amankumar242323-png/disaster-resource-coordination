@@ -3,10 +3,11 @@ openapi: 3.0.3
 
 info:
   title: Disaster Resource Coordination - Field Reports API
-  version: "1.0.0"
+  version: "1.1.0"
   description: >
-    API for creating, retrieving and listing field reports
-    and registering report photo metadata.
+    API for creating, retrieving, listing and uploading photos for field
+    reports. Supports JSON by default, XML when requested, Problem Details
+    errors, validation, idempotent report creation and rate limiting.
 
 servers:
   - url: http://localhost:8080
@@ -16,18 +17,63 @@ tags:
   - name: Reports
     description: Field report operations
   - name: Photos
-    description: Report photo metadata
+    description: Report photo uploads
+  - name: Health
+    description: Service health checks
 
 paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Check service and database health
+      responses:
+        "200":
+          description: Service and database are available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  status:
+                    type: string
+                  database:
+                    type: string
+            application/xml:
+              schema:
+                type: object
+        "406":
+          $ref: "#/components/responses/NotAcceptable"
+        "503":
+          description: Database is unavailable
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying
+              schema:
+                type: integer
+                example: 30
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+            application/xml:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /reports:
     post:
       tags:
         - Reports
       summary: Create a field report
       description: >
-        Creates a report. Repeated requests with the same
-        Idempotency-Key and identical payload must not create
-        duplicate reports.
+        Creates a report using a UUID Idempotency-Key. A repeated request
+        with the same key and identical normalized payload replays the
+        existing result instead of creating a duplicate. Reusing the key
+        with a different payload returns a conflict.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -41,19 +87,47 @@ paths:
           description: Report created
           headers:
             Location:
-              description: URL of the created report
+              description: URI of the created report
+              schema:
+                type: string
+                example: /reports/116
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+            application/xml:
+              schema:
+                type: object
+        "200":
+          description: Existing report returned for an idempotent replay
+          headers:
+            Location:
+              description: URI of the existing report
+              schema:
+                type: string
+            Idempotency-Replayed:
+              description: Replay indicator, if supplied by the implementation
               schema:
                 type: string
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Report"
+            application/xml:
+              schema:
+                type: object
         "400":
           $ref: "#/components/responses/BadRequest"
+        "406":
+          $ref: "#/components/responses/NotAcceptable"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -61,6 +135,10 @@ paths:
       tags:
         - Reports
       summary: List field reports
+      description: >
+        Lists reports with optional filtering, sorting and pagination.
+        JSON is the default response format. XML can be requested using
+        the Accept header.
       parameters:
         - name: shelterId
           in: query
@@ -81,6 +159,32 @@ paths:
             minimum: 1
             maximum: 100
             default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - reportId
+              - createdAt
+              - severity
+            default: reportId
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
       responses:
         "200":
           description: Matching reports
@@ -90,8 +194,15 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Report"
+            application/xml:
+              schema:
+                type: object
         "400":
           $ref: "#/components/responses/BadRequest"
+        "406":
+          $ref: "#/components/responses/NotAcceptable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -101,7 +212,7 @@ paths:
     get:
       tags:
         - Reports
-      summary: Get one field report
+      summary: Retrieve one field report
       responses:
         "200":
           description: Report found
@@ -109,10 +220,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Report"
+            application/xml:
+              schema:
+                type: object
         "400":
           $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
+        "406":
+          $ref: "#/components/responses/NotAcceptable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -124,8 +242,8 @@ paths:
         - Photos
       summary: Upload a photo for a field report
       description: >
-        Uploads one JPEG, PNG or WebP image and stores its metadata.
-        Maximum file size is 5 MiB.
+        Uploads one JPEG, PNG or WebP image. The maximum file size is
+        5 MiB. The report must already exist.
       requestBody:
         required: true
         content:
@@ -146,25 +264,29 @@ paths:
           description: Photo uploaded and metadata saved
           headers:
             Location:
-              description: URL identifying the uploaded photo
+              description: URI identifying the uploaded photo
               schema:
                 type: string
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReportPhoto"
+            application/xml:
+              schema:
+                type: object
         "400":
           $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
+        "406":
+          $ref: "#/components/responses/NotAcceptable"
         "413":
-          description: Uploaded file exceeds 5 MiB
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/PayloadTooLarge"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
+
 components:
   parameters:
     ReportId:
@@ -180,7 +302,7 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      description: Unique UUID for one logical report-creation attempt.
+      description: UUID identifying one logical report-creation attempt.
       schema:
         type: string
         format: uuid
@@ -258,24 +380,6 @@ components:
           type: string
           format: date-time
 
-    CreatePhotoRequest:
-      type: object
-      required:
-        - fileName
-        - contentType
-        - fileSizeBytes
-      properties:
-        fileName:
-          type: string
-          minLength: 1
-          maxLength: 255
-        contentType:
-          type: string
-          maxLength: 100
-        fileSizeBytes:
-          type: integer
-          minimum: 0
-
     ReportPhoto:
       type: object
       required:
@@ -315,45 +419,108 @@ components:
       properties:
         type:
           type: string
+          description: Stable URI identifying the problem type
+          example: /errors/validation-error
         title:
           type: string
+          example: Validation Failed
         status:
           type: integer
+          example: 422
         detail:
           type: string
+          example: One or more fields are invalid
+        errors:
+          type: array
+          description: Field-specific validation errors, when present
+          items:
+            type: object
+            required:
+              - field
+              - message
+            properties:
+              field:
+                type: string
+              message:
+                type: string
 
   responses:
     BadRequest:
-      description: Malformed request or invalid query parameter
+      description: Malformed JSON, invalid parameters or invalid request data
       content:
-        application/json:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+        application/xml:
+          schema:
+            type: object
+
+    NotAcceptable:
+      description: Requested response representation is not supported
+      content:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
 
     Conflict:
-      description: Idempotency key reused with a different payload
+      description: Idempotency key was reused with a different payload
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+        application/xml:
+          schema:
+            type: object
 
     NotFound:
       description: Requested report does not exist
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+        application/xml:
+          schema:
+            type: object
 
     UnprocessableEntity:
-      description: Request violates a business or domain rule
+      description: Request fields failed application-level validation
       content:
-        application/json:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+        application/xml:
+          schema:
+            type: object
+
+    PayloadTooLarge:
+      description: Request body or uploaded photo exceeds the configured limit
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+        application/xml:
+          schema:
+            type: object
+
+    RateLimited:
+      description: Request rate limit exceeded
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
 
     InternalError:
       description: Unexpected server error
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+        application/xml:
+          schema:
+            type: object

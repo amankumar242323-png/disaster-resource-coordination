@@ -1,4 +1,4 @@
-\# Assignment 5 — HTTP Methods \& Headers
+\# Assignment 5 â€” HTTP Methods \& Headers
 
 
 
@@ -325,3 +325,67 @@ The local tests confirmed report creation, Location headers, idempotency replay,
 
 
 Additional verification is required for PUT, DELETE, 405, 406, 422, 429, the Allow header, production HSTS and any other assignment requirements not covered by the recorded tests.
+
+
+
+## Assignment 6 â€” HTTP Status Codes, Validation and Error Handling
+
+### 1. Objective
+
+This assignment improves the Disaster Resource Coordination Field Reports API by providing consistent HTTP status codes, request validation, content negotiation, rate limiting and structured error responses.
+
+### 2. HTTP Status Codes
+
+| Status | Meaning | API usage |
+|---|---|---|
+| 200 OK | Request succeeded | Retrieve reports or replay an idempotent request |
+| 201 Created | Resource created | Create a report or upload a photo |
+| 400 Bad Request | Invalid request | Malformed JSON, invalid parameters or invalid idempotency key |
+| 404 Not Found | Resource not found | Requested report does not exist |
+| 406 Not Acceptable | Unsupported response format | Requested Accept type is not supported |
+| 409 Conflict | Request conflicts with existing state | Idempotency key reused with a different payload |
+| 413 Payload Too Large | Request exceeds size limit | Oversized photo or request body |
+| 422 Unprocessable Content | Validation failed | Invalid report fields |
+| 429 Too Many Requests | Rate limit exceeded | Too many requests within the configured time window |
+| 500 Internal Server Error | Unexpected server failure | Unhandled server error |
+| 503 Service Unavailable | Service dependency unavailable | Database connection failure during health check |
+
+### 3. Problem Details
+
+API errors use a consistent structure containing `type`, `title`, `status` and `detail`. Validation errors may additionally contain an `errors` array with field names and messages.
+
+The JSON error media type is `application/problem+json`. XML error representations are supported on routes that use content negotiation.
+
+### 4. Request Validation
+
+The report creation endpoint validates the request before attempting report creation. It checks positive integer identifiers, report type length, severity, description and occupancy count.
+
+Invalid report fields return `422 Unprocessable Content`. Malformed JSON, an invalid request object or an invalid idempotency key return `400 Bad Request`.
+
+### 5. Content Negotiation
+
+JSON is the default response format. Clients can request XML using `Accept: application/xml` or `Accept: text/xml`. Unsupported Accept values are intended to produce `406 Not Acceptable`.
+
+### 6. Rate Limiting and Retry Behaviour
+
+The reports API uses a configurable rate limit, defaulting to 100 requests per minute. In the test environment, requests with `X-Test-Rate-Key` use an isolated counter with a limit of two requests.
+
+A rate-limit response returns `429 Too Many Requests` with `Retry-After: 60`. The health endpoint returns `503 Service Unavailable` with `Retry-After: 30` when its database check fails.
+
+Clients should respect Retry-After rather than retrying continuously.
+
+### 7. Idempotency
+
+Report creation requires a UUID `Idempotency-Key`. Repeating a request with the same key and equivalent payload is intended to avoid duplicate creation. Reusing the key with a different payload returns `409 Conflict`.
+
+Clients should reuse the same key and request body when retrying after an uncertain network failure.
+
+### 8. Automated Testing
+
+The existing automated test suite completed successfully with 16 passing tests, including report operations, photo uploads and rate limiting.
+
+Additional manual verification should cover unsupported Accept values, malformed JSON, invalid report fields, unknown report IDs, idempotency conflicts and health-check failure responses.
+
+### 9. Specification and Verification
+
+The OpenAPI document is maintained at `reports/openapi.yaml`. Documentation describes intended API behaviour; actual responses must be verified through tests or recorded HTTP requests before being claimed as passing.

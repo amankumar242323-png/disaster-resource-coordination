@@ -1,0 +1,140 @@
+# Assignment 6 — HTTP Request and Response Transcript
+
+Project: Disaster Resource Coordination API
+Base URL: `http://localhost:8080`
+
+Note: The examples below describe requests and expected response formats. Record actual responses after executing the requests against the running API.
+
+## 1. Health Check
+
+Request:
+
+```http
+GET /health HTTP/1.1
+Host: localhost:8080
+Accept: application/json
+```
+
+Expected success: `200 OK` when the database is connected.
+
+Expected failure: `503 Service Unavailable` with `Retry-After: 30` when the database check fails.
+
+## 2. List Reports
+
+Request:
+
+```http
+GET /reports?limit=10&offset=0&sortBy=reportId&order=desc HTTP/1.1
+Host: localhost:8080
+Accept: application/json
+```
+
+Expected success: `200 OK` with a JSON array of reports.
+
+## 3. Retrieve an Unknown Report
+
+Request:
+
+```http
+GET /reports/999999 HTTP/1.1
+Host: localhost:8080
+Accept: application/problem+json
+```
+
+Expected result: `404 Not Found` with a Problem Details response containing `type`, `title`, `status` and `detail`.
+
+## 4. Unsupported Response Format
+
+Request:
+
+```http
+GET /reports HTTP/1.1
+Host: localhost:8080
+Accept: application/pdf
+```
+
+Expected result: `406 Not Acceptable`.
+
+Verify that the error response has the correct content type and body.
+
+## 5. Invalid Report Fields
+
+Request:
+
+```http
+POST /reports HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+Accept: application/problem+json
+Idempotency-Key: 123e4567-e89b-42d3-a456-426614174000
+
+{
+  "shelterId": -1,
+  "reportedBy": 0,
+  "reportType": "",
+  "severity": "INVALID",
+  "description": ""
+}
+```
+
+Expected result: `422 Unprocessable Content` with an `errors` array identifying invalid fields.
+
+## 6. Invalid Idempotency Key
+
+Request:
+
+```http
+POST /reports HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+Accept: application/problem+json
+Idempotency-Key: invalid-key
+
+{
+  "shelterId": 1,
+  "reportedBy": 1,
+  "reportType": "SUPPLY",
+  "severity": "HIGH",
+  "description": "Water supply required"
+}
+```
+
+Expected result: `400 Bad Request` with a Problem Details response.
+
+## 7. Rate Limiting
+
+Send three requests to `/reports` using the same `X-Test-Rate-Key` in the test environment.
+
+Expected result: after two requests within the test limit, the next request returns `429 Too Many Requests` and `Retry-After: 60`.
+
+## 8. Idempotent Report Creation
+
+Send a valid POST request with a UUID `Idempotency-Key`.
+
+Expected first response: `201 Created` with a `Location` header.
+
+Repeat the same request with the same key and payload.
+
+Expected replay response: `200 OK` for the existing report.
+
+Reuse the same key with a different payload.
+
+Expected result: `409 Conflict`.
+
+## 9. XML Content Negotiation
+
+Request:
+
+```http
+GET /reports HTTP/1.1
+Host: localhost:8080
+Accept: application/xml
+```
+
+Expected success: `200 OK` with an XML response when the request is valid.
+
+## 10. Notes
+
+- Run requests against the actual local API before recording results as PASS.
+- Capture response status codes, headers and bodies.
+- Do not include database credentials or other secrets in the transcript.

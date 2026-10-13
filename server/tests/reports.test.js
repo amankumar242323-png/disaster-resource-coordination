@@ -1,3 +1,4 @@
+
 const request = require("supertest");
 const crypto = require("node:crypto");
 const app = require("../app");
@@ -135,7 +136,7 @@ describe("Field Reports API", () => {
     expect(second.body.reportId).not.toBe(first.body.reportId);
   });
 
-  test("Invalid severity returns 400", async () => {
+  test("Invalid severity returns 422 Problem Details", async () => {
     const response = await request(app)
       .post("/reports")
       .set("Idempotency-Key", crypto.randomUUID())
@@ -144,7 +145,20 @@ describe("Field Reports API", () => {
         severity: "URGENT",
       });
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(422);
+    expect(response.headers["content-type"]).toMatch(
+      /^application\/problem\+json/
+    );
+    expect(response.body.status).toBe(422);
+    expect(response.body.type).toBe("/errors/validation-error");
+    expect(response.body.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "severity",
+          message: "must be LOW, MEDIUM, HIGH or CRITICAL",
+        }),
+      ])
+    );
   });
 
   test("Missing report returns 404", async () => {
@@ -154,99 +168,126 @@ describe("Field Reports API", () => {
   });
 });
 
-
-  describe("Report photo uploads", () => {
-    const makeReport = () => ({
-      shelterId: 1,
-      reportedBy: 101,
-      reportType: "FOOD_SHORTAGE",
-      severity: "HIGH",
-      description: "Food supplies are insufficient",
-      occupancyCount: 150,
-    });
-
-    let reportId;
-
-    beforeAll(async () => {
-      const response = await request(app)
-        .post("/reports")
-        .set("Idempotency-Key", crypto.randomUUID())
-        .send(makeReport());
-
-      expect(response.status).toBe(201);
-      reportId = response.body.reportId;
-    });
-
-    test("Uploads a PNG photo and saves metadata", async () => {
-      // Minimal valid 1x1 PNG image.
-      const png = Buffer.from(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jv2sAAAAASUVORK5CYII=",
-        "base64"
-      );
-
-      const response = await request(app)
-        .post(`/reports/${reportId}/photos`)
-        .attach("photo", png, {
-          filename: "evidence.png",
-          contentType: "image/png",
-        });
-
-      expect(response.status).toBe(201);
-      expect(response.body.reportId).toBe(reportId);
-      expect(response.body.contentType).toBe("image/png");
-      expect(response.body.fileSizeBytes).toBe(png.length);
-
-      const saved = await pool.query(
-        `SELECT photo_id FROM reports.report_photos
-         WHERE photo_id = $1 AND report_id = $2`,
-        [response.body.photoId, reportId]
-      );
-
-      expect(saved.rowCount).toBe(1);
-    });
-
-    test("Missing photo returns 400", async () => {
-      const response = await request(app)
-        .post(`/reports/${reportId}/photos`);
-
-      expect(response.status).toBe(400);
-    });
-
-    test("Unsupported file type returns 400", async () => {
-      const response = await request(app)
-        .post(`/reports/${reportId}/photos`)
-        .attach("photo", Buffer.from("not an image"), {
-          filename: "notes.txt",
-          contentType: "text/plain",
-        });
-
-      expect(response.status).toBe(400);
-    });
-
-    test("Oversized photo returns 413", async () => {
-      const oversized = Buffer.alloc(5 * 1024 * 1024 + 1, 1);
-
-      const response = await request(app)
-        .post(`/reports/${reportId}/photos`)
-        .attach("photo", oversized, {
-          filename: "large.png",
-          contentType: "image/png",
-        });
-
-      expect(response.status).toBe(413);
-    });
-
-    test("Nonexistent report returns 404", async () => {
-      const response = await request(app)
-        .post("/reports/999999999/photos")
-        .attach("photo", Buffer.from("image"), {
-          filename: "evidence.png",
-          contentType: "image/png",
-        });
-
-      expect(response.status).toBe(404);
-    });
+describe("Report photo uploads", () => {
+  const makeReport = () => ({
+    shelterId: 1,
+    reportedBy: 101,
+    reportType: "FOOD_SHORTAGE",
+    severity: "HIGH",
+    description: "Food supplies are insufficient",
+    occupancyCount: 150,
   });
+
+  let reportId;
+
+  beforeAll(async () => {
+    const response = await request(app)
+      .post("/reports")
+      .set("Idempotency-Key", crypto.randomUUID())
+      .send(makeReport());
+
+    expect(response.status).toBe(201);
+    reportId = response.body.reportId;
+  });
+
+  test("Uploads a PNG photo and saves metadata", async () => {
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jv2sAAAAASUVORK5CYII=",
+      "base64"
+    );
+
+    const response = await request(app)
+      .post(`/reports/${reportId}/photos`)
+      .attach("photo", png, {
+        filename: "evidence.png",
+        contentType: "image/png",
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.reportId).toBe(reportId);
+    expect(response.body.contentType).toBe("image/png");
+    expect(response.body.fileSizeBytes).toBe(png.length);
+
+    const saved = await pool.query(
+      `SELECT photo_id FROM reports.report_photos
+       WHERE photo_id = $1 AND report_id = $2`,
+      [response.body.photoId, reportId]
+    );
+
+    expect(saved.rowCount).toBe(1);
+  });
+
+  test("Missing photo returns 400", async () => {
+    const response = await request(app)
+      .post(`/reports/${reportId}/photos`);
+
+    expect(response.status).toBe(400);
+  });
+
+  test("Unsupported file type returns 400", async () => {
+    const response = await request(app)
+      .post(`/reports/${reportId}/photos`)
+      .attach("photo", Buffer.from("not an image"), {
+        filename: "notes.txt",
+        contentType: "text/plain",
+      });
+
+    expect(response.status).toBe(400);
+  });
+
+  test("Oversized photo returns 413", async () => {
+    const oversized = Buffer.alloc(5 * 1024 * 1024 + 1, 1);
+
+    const response = await request(app)
+      .post(`/reports/${reportId}/photos`)
+      .attach("photo", oversized, {
+        filename: "large.png",
+        contentType: "image/png",
+      });
+
+    expect(response.status).toBe(413);
+  });
+
+  test("Nonexistent report returns 404", async () => {
+    const response = await request(app)
+      .post("/reports/999999999/photos")
+      .attach("photo", Buffer.from("image"), {
+        filename: "evidence.png",
+        contentType: "image/png",
+      });
+
+    expect(response.status).toBe(404);
+  });
+});
+
+describe("Rate limiting", () => {
+  test("Returns 429 and Retry-After when the limit is exceeded", async () => {
+    const headers = {
+      "X-Test-Rate-Key": "rate-limit-test",
+    };
+
+    const first = await request(app)
+      .get("/reports")
+      .set(headers);
+
+    const second = await request(app)
+      .get("/reports")
+      .set(headers);
+
+    const third = await request(app)
+      .get("/reports")
+      .set(headers);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(third.status).toBe(429);
+    expect(third.headers["retry-after"]).toBe("60");
+    expect(third.headers["content-type"]).toMatch(
+      /^application\/problem\+json/
+    );
+    expect(third.body.status).toBe(429);
+  });
+});
 
 afterAll(async () => {
   await pool.end();

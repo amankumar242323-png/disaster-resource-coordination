@@ -1,6 +1,7 @@
 
 const express = require("express");
 const cors = require("cors");
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 const crypto = require("node:crypto");
 require("dotenv").config();
 
@@ -25,6 +26,166 @@ const ALLOWED_SORT_FIELDS = new Set([
   "severity",
 ]);
 
+// Consistent Problem Details response
+function sendProblem(res, status, code, title, detail, errors) {
+  const result = problem(status, code, title, detail, errors);
+
+  return res
+    .status(result.status)
+    .type("application/problem+json")
+    .send(JSON.stringify(result.body));
+}
+
+// Consistent JSON response
+function sendJson(res, status, body) {
+  return res
+    .status(status)
+    .type("application/json")
+    .json(body);
+}
+
+// Content negotiation: JSON by default, XML when requested
+function acceptsXml(req) {
+  const accept = req.get("Accept");
+
+  if (!accept || accept.trim() === "" || accept.includes("*/*")) {
+    return false;
+  }
+
+  const types = accept.split(",").map((entry) => {
+    const parts = entry.trim().split(";");
+    const type = parts[0].trim().toLowerCase();
+    const qPart = parts.find((part) => part.trim().startsWith("q="));
+    const q = qPart ? Number(qPart.trim().slice(2)) : 1;
+
+    return { type, q };
+  });
+
+  const xml = types.some(
+    (entry) =>
+      entry.q > 0 &&
+      (entry.type === "application/xml" ||
+        entry.type === "text/xml")
+  );
+
+  const json = types.some(
+    (entry) =>
+      entry.q > 0 &&
+      (entry.type === "application/json" ||
+        entry.type === "application/*")
+  );
+
+  return xml && !json;
+}
+
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function objectToXml(value, rootName = "response") {
+  function element(name, item) {
+    const safeName = /^[A-Za-z_][A-Za-z0-9_.-]*$/.test(name)
+      ? name
+      : "item";
+
+    if (item === null || item === undefined) {
+      return `<${safeName}/>`;
+    }
+
+    if (Array.isArray(item)) {
+      return item.map((entry) => element("item", entry)).join("");
+    }
+
+    if (typeof item === "object") {
+      const children = Object.entries(item)
+        .map(([key, child]) => element(key, child))
+        .join("");
+
+      return `<${safeName}>${children}</${safeName}>`;
+    }
+
+    return `<${safeName}>${escapeXml(item)}</${safeName}>`;
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>${element(
+    rootName,
+    value
+  )}`;
+}
+
+function sendData(req, res, status, body, rootName = "response") {
+  if (acceptsXml(req)) {
+    return res
+      .status(status)
+      .type("application/xml")
+      .send(objectToXml(body, rootName));
+  }
+
+  return sendJson(res, status, body);
+}
+
+function sendApiProblem(
+  req,
+  res,
+  status,
+  code,
+  title,
+  detail,
+  errors
+) {
+  const result = problem(status, code, title, detail, errors);
+
+  if (acceptsXml(req)) {
+    return res
+      .status(status)
+      .type("application/xml")
+      .send(objectToXml(result.body, "problem"));
+  }
+
+  return sendProblem(res, status, code, title, detail, errors);
+}
+
+function requireSupportedAccept(req, res, next) {
+  const accept = req.get("Accept");
+
+  if (!accept || accept.trim() === "" || accept.includes("*/*")) {
+    return next();
+  }
+
+  const supported = accept.split(",").some((entry) => {
+    const [type, ...params] = entry.trim().toLowerCase().split(";");
+    const qPart = params.find((param) => param.trim().startsWith("q="));
+    const q = qPart ? Number(qPart.trim().slice(2)) : 1;
+
+    return (
+      q > 0 &&
+      [
+        "application/json",
+        "application/xml",
+        "text/xml",
+        "application/*",
+      ].includes(type.trim())
+    );
+  });
+
+  if (!supported) {
+    return sendProblem(
+      res,
+      406,
+      "not-acceptable",
+      "Not Acceptable",
+      "This API supports application/json and application/xml"
+    );
+  }
+
+  next();
+}
+
 // CORS and common security headers
 app.use(cors());
 
@@ -34,8 +195,49 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(requireSupportedAccept);
 app.use(express.json({ limit: "1mb" }));
 
+// Rate limiting: production default is 100 requests per minute.
+// Tests using X-Test-Rate-Key get their own isolated counter and limit.
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+
+  limit: (req) => {
+    if (process.env.NODE_ENV === "test" && req.get("X-Test-Rate-Key")) {
+      return 2;
+    }
+
+    return Number(process.env.API_RATE_LIMIT || 100);
+  },
+
+  keyGenerator: (req) => {
+    if (process.env.NODE_ENV === "test" && req.get("X-Test-Rate-Key")) {
+      return req.get("X-Test-Rate-Key");
+    }
+
+    return ipKeyGenerator(req.ip);
+  },
+
+  standardHeaders: true,
+  legacyHeaders: false,
+
+  handler: (req, res) => {
+    res.setHeader("Retry-After", "60");
+
+    return sendProblem(
+      res,
+      429,
+      "rate-limit-exceeded",
+      "Too Many Requests",
+      "Request limit exceeded. Retry after 60 seconds."
+    );
+  },
+});
+
+app.use("/reports", apiLimiter);
+
+// Validate report fields before database work
 function validateReport(body) {
   const errors = [];
 
@@ -43,14 +245,20 @@ function validateReport(body) {
     !Number.isSafeInteger(body.shelterId) ||
     body.shelterId <= 0
   ) {
-    errors.push(["shelterId", "must be a positive integer"]);
+    errors.push([
+      "shelterId",
+      "must be a positive integer",
+    ]);
   }
 
   if (
     !Number.isSafeInteger(body.reportedBy) ||
     body.reportedBy <= 0
   ) {
-    errors.push(["reportedBy", "must be a positive integer"]);
+    errors.push([
+      "reportedBy",
+      "must be a positive integer",
+    ]);
   }
 
   if (
@@ -103,21 +311,26 @@ app.get("/health", async (req, res) => {
   try {
     await pool.query("SELECT 1");
 
-    return res.status(200).json({
+    return sendData(req, res, 200, {
       service: "disaster-resource-coordination",
       status: "alive",
       database: "connected",
     });
   } catch (error) {
-    return res.status(503).json({
-      service: "disaster-resource-coordination",
-      status: "unavailable",
-      database: "disconnected",
-    });
+    res.setHeader("Retry-After", "30");
+
+    return sendApiProblem(
+      req,
+      res,
+      503,
+      "service-unavailable",
+      "Service Unavailable",
+      "Database is disconnected; retry after 30 seconds"
+    );
   }
 });
 
-// Create a report with Idempotency-Key support
+// Create report with Idempotency-Key support
 app.post("/reports", async (req, res, next) => {
   try {
     const body = req.body;
@@ -127,30 +340,28 @@ app.post("/reports", async (req, res, next) => {
       typeof body !== "object" ||
       Array.isArray(body)
     ) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         400,
         "invalid-request",
         "Invalid request",
         "Expected a JSON object"
       );
-
-      return res.status(400).json(err.body);
     }
 
     const errors = validateReport(body);
 
     if (errors.length > 0) {
-      const err = problem(
-        400,
-        "invalid-request",
-        "Invalid request",
-        "One or more fields are invalid"
+      return sendApiProblem(
+        req,
+        res,
+        422,
+        "validation-error",
+        "Validation Failed",
+        "One or more fields are invalid",
+        errors
       );
-
-      return res.status(400).json({
-        ...err.body,
-        errors,
-      });
     }
 
     const key = req.get("Idempotency-Key");
@@ -159,14 +370,14 @@ app.post("/reports", async (req, res, next) => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
     if (!key || !uuidPattern.test(key)) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         400,
         "invalid-idempotency-key",
         "Invalid Idempotency-Key",
         "A valid UUID Idempotency-Key header is required"
       );
-
-      return res.status(400).json(err.body);
     }
 
     const payload = {
@@ -187,24 +398,24 @@ app.post("/reports", async (req, res, next) => {
 
     if (previous) {
       if (previous.requestHash !== requestHash) {
-        const err = problem(
+        return sendApiProblem(
+          req,
+          res,
           409,
           "idempotency-conflict",
           "Conflict",
           "This Idempotency-Key was already used with a different request"
         );
-
-        return res.status(409).json(err.body);
       }
 
       if (previous.response) {
-        return res.status(200).json(previous.response);
+        return sendData(req, res, 200, previous.response, "report");
       }
 
       const existing = await store.find(previous.reportId);
 
       if (existing) {
-        return res.status(200).json(existing.asJson());
+        return sendData(req, res, 200, existing.asJson(), "report");
       }
     }
 
@@ -214,20 +425,23 @@ app.post("/reports", async (req, res, next) => {
       requestHash
     );
 
-    return res
-      .status(result.replayed ? 200 : 201)
-      .location(`/reports/${result.report.reportId}`)
-      .json(result.report);
+    return sendData(
+      req,
+      res,
+      result.replayed ? 200 : 201,
+      result.report,
+      "report"
+    ).location(`/reports/${result.report.reportId}`);
   } catch (error) {
     if (error.status === 409) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         409,
         "idempotency-conflict",
         "Conflict",
         error.message
       );
-
-      return res.status(409).json(err.body);
     }
 
     next(error);
@@ -250,7 +464,6 @@ app.get("/reports", async (req, res, next) => {
     const parsedLimit = Number(limit);
     const parsedOffset = Number(offset);
 
-    // shelterId validation
     if (shelterId !== undefined) {
       parsedShelterId = Number(shelterId);
 
@@ -258,85 +471,80 @@ app.get("/reports", async (req, res, next) => {
         !Number.isSafeInteger(parsedShelterId) ||
         parsedShelterId <= 0
       ) {
-        const err = problem(
+        return sendApiProblem(
+          req,
+          res,
           400,
           "invalid-request",
           "Invalid request",
           "shelterId must be a positive integer"
         );
-
-        return res.status(400).json(err.body);
       }
     }
 
-    // Severity validation
     if (
       severity !== undefined &&
       !VALID_SEVERITIES.has(severity)
     ) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         400,
         "invalid-request",
         "Invalid request",
         "severity must be LOW, MEDIUM, HIGH or CRITICAL"
       );
-
-      return res.status(400).json(err.body);
     }
 
-    // Limit validation
     if (
       !Number.isSafeInteger(parsedLimit) ||
       parsedLimit < 1 ||
       parsedLimit > 100
     ) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         400,
         "invalid-request",
         "Invalid request",
         "limit must be an integer between 1 and 100"
       );
-
-      return res.status(400).json(err.body);
     }
 
-    // Offset validation
     if (
       !Number.isSafeInteger(parsedOffset) ||
       parsedOffset < 0
     ) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         400,
         "invalid-request",
         "Invalid request",
         "offset must be a non-negative integer"
       );
-
-      return res.status(400).json(err.body);
     }
 
-    // Sort field validation
     if (!ALLOWED_SORT_FIELDS.has(sortBy)) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         400,
         "invalid-request",
         "Invalid request",
         "sortBy must be reportId, createdAt or severity"
       );
-
-      return res.status(400).json(err.body);
     }
 
-    // Sort direction validation
     if (!["asc", "desc"].includes(order)) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         400,
         "invalid-request",
         "Invalid request",
         "order must be asc or desc"
       );
-
-      return res.status(400).json(err.body);
     }
 
     const reports = await store.list({
@@ -348,9 +556,13 @@ app.get("/reports", async (req, res, next) => {
       order,
     });
 
-    return res
-      .status(200)
-      .json(reports.map((report) => report.asJson()));
+    return sendData(
+      req,
+      res,
+      200,
+      reports.map((report) => report.asJson()),
+      "reports"
+    );
   } catch (error) {
     next(error);
   }
@@ -365,30 +577,30 @@ app.get("/reports/:reportId", async (req, res, next) => {
       !Number.isSafeInteger(reportId) ||
       reportId <= 0
     ) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         400,
         "invalid-request",
         "Invalid request",
         "reportId must be a positive integer"
       );
-
-      return res.status(400).json(err.body);
     }
 
     const report = await store.find(reportId);
 
     if (!report) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         404,
-        "not-found",
+        "report-not-found",
         "Report not found",
         `No report exists with ID ${reportId}`
       );
-
-      return res.status(404).json(err.body);
     }
 
-    return res.status(200).json(report.asJson());
+    return sendData(req, res, 200, report.asJson(), "report");
   } catch (error) {
     next(error);
   }
@@ -405,14 +617,14 @@ app.post(
       !Number.isSafeInteger(reportId) ||
       reportId <= 0
     ) {
-      const err = problem(
+      return sendApiProblem(
+        req,
+        res,
         400,
         "invalid-request",
         "Invalid request",
         "reportId must be a positive integer"
       );
-
-      return res.status(400).json(err.body);
     }
 
     next();
@@ -425,14 +637,14 @@ app.post(
       );
 
       if (!report) {
-        const err = problem(
+        return sendApiProblem(
+          req,
+          res,
           404,
-          "not-found",
+          "report-not-found",
           "Report not found",
           `No report exists with ID ${req.params.reportId}`
         );
-
-        return res.status(404).json(err.body);
       }
 
       next();
@@ -447,14 +659,14 @@ app.post(
   async (req, res, next) => {
     try {
       if (!req.file) {
-        const err = problem(
+        return sendApiProblem(
+          req,
+          res,
           400,
           "missing-photo",
           "Missing photo",
           'Upload one image using the multipart field "photo"'
         );
-
-        return res.status(400).json(err.body);
       }
 
       const saved = await photoStore.savePhoto(
@@ -462,27 +674,27 @@ app.post(
         req.file
       );
 
-      return res
-        .status(201)
+      const response = {
+        photoId: Number(saved.photo_id),
+        reportId: Number(saved.report_id),
+        fileName: saved.file_name,
+        contentType: saved.content_type,
+        fileSizeBytes: saved.file_size_bytes,
+        storagePath: saved.storage_path,
+        uploadedAt: saved.uploaded_at,
+      };
+
+      return sendData(req, res, 201, response, "photo")
         .location(
           `/reports/${saved.report_id}/photos/${saved.photo_id}`
-        )
-        .json({
-          photoId: Number(saved.photo_id),
-          reportId: Number(saved.report_id),
-          fileName: saved.file_name,
-          contentType: saved.content_type,
-          fileSizeBytes: saved.file_size_bytes,
-          storagePath: saved.storage_path,
-          uploadedAt: saved.uploaded_at,
-        });
+        );
     } catch (error) {
       next(error);
     }
   }
 );
 
-// OPTIONS support: advertise supported methods
+// OPTIONS support
 app.options("/reports", (req, res) => {
   res.setHeader("Allow", "GET, POST, HEAD, OPTIONS");
   return res.status(204).end();
@@ -498,16 +710,16 @@ app.options("/reports/:reportId/photos", (req, res) => {
   return res.status(204).end();
 });
 
-// Handle unknown routes
+// Unknown routes
 app.use((req, res) => {
-  const err = problem(
+  return sendApiProblem(
+    req,
+    res,
     404,
-    "not-found",
+    "route-not-found",
     "Not Found",
     `Route ${req.method} ${req.originalUrl} not found`
   );
-
-  return res.status(404).json(err.body);
 });
 
 // Central error handler
@@ -521,65 +733,65 @@ app.use((err, req, res, next) => {
     err.status === 400 &&
     "body" in err
   ) {
-    const p = problem(
+    return sendApiProblem(
+      req,
+      res,
       400,
       "invalid-json",
       "Invalid JSON",
       "Request body contains malformed JSON"
     );
-
-    return res.status(400).json(p.body);
   }
 
   if (err.code === "LIMIT_FILE_SIZE") {
-    const p = problem(
+    return sendApiProblem(
+      req,
+      res,
       413,
       "file-too-large",
       "Payload Too Large",
       "Photo size must not exceed 5 MB"
     );
-
-    return res.status(413).json(p.body);
   }
 
   if (
     err.code === "LIMIT_FILE_COUNT" ||
     err.code === "LIMIT_UNEXPECTED_FILE"
   ) {
-    const p = problem(
+    return sendApiProblem(
+      req,
+      res,
       400,
       "invalid-upload",
       "Invalid upload",
       "Upload exactly one image using the multipart field 'photo'"
     );
-
-    return res.status(400).json(p.body);
   }
 
   if (
     err.code === "INVALID_FILE_TYPE" ||
     err.status === 400
   ) {
-    const p = problem(
+    return sendApiProblem(
+      req,
+      res,
       400,
       "invalid-file-type",
       "Invalid file type",
       err.message || "Only JPEG, PNG and WebP images are allowed"
     );
-
-    return res.status(400).json(p.body);
   }
 
   console.error(err.message);
 
-  const p = problem(
+  return sendApiProblem(
+    req,
+    res,
     500,
     "internal-error",
     "Internal Server Error",
     "An unexpected error occurred"
   );
-
-  return res.status(500).json(p.body);
 });
 
 const PORT = process.env.PORT || 8080;
